@@ -1,0 +1,20 @@
+{
+  "defaultSeverity": "error",
+  "extends": [
+    "tslint:latest",
+    "tslint-config-prettier"
+  ],
+  "rules": {
+    "interface-name": [true, "never-prefix"],
+    "max-classes-per-file": false,
+    "member-access": [true, "no-public"],
+    "no-console": false,
+    "prefer-readonly": true,
+    "prettier": true
+  },
+  "jsRules": {
+    "no-console": false,
+    "prettier": true
+  },
+  "rulesDirectory": ["tslint-plugin-prettier"]
+}

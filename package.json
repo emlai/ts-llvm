@@ -1,0 +1,56 @@
+{
+  "name": "ts-llvm",
+  "version": "0.0.0",
+  "description": "TypeScript to LLVM compiler",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsc && node build/main.js",
+    "test": "tsc && node test/test-runner.js",
+    "lint": "tslint --project tsconfig.json \"{lib,src,test}/**/*.{ts,js}\"",
+    "format": "npm run lint -- --fix",
+    "precommit": "lint-staged"
+  },
+  "lint-staged": {
+    "{lib,src,test}/**/*.{ts,js}": [
+      "tslint --project tsconfig.json --fix",
+      "git add"
+    ]
+  },
+  "prettier": {
+    "printWidth": 120
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/emlai/ts-llvm.git"
+  },
+  "keywords": [
+    "TypeScript",
+    "LLVM",
+    "compiler"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/emlai/ts-llvm/issues"
+  },
+  "homepage": "https://github.com/emlai/ts-llvm",
+  "dependencies": {
+    "commander": "^2.15.1",
+    "llvm-node": "emlai/llvm-node",
+    "ramda": "^0.25.0",
+    "typescript": "^2.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^9.6.9",
+    "@types/ramda": "^0.25.24",
+    "chalk": "^2.4.1",
+    "diff": "^3.5.0",
+    "husky": "^0.14.3",
+    "lint-staged": "^7.0.5",
+    "prettier": "1.12.1",
+    "tslint": "^5.9.1",
+    "tslint-config-prettier": "^1.12.0",
+    "tslint-plugin-prettier": "^1.3.0"
+  }
+}

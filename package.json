@@ -7,12 +7,12 @@
     "build": "tsc",
     "start": "tsc && node build/main.js",
     "test": "tsc && node test/test-runner.js",
-    "lint": "tslint --project tsconfig.json \"{lib,src,test}/**/*.{ts,js}\"",
+    "lint": "tslint --project tsconfig.json \"{lib,src,test}/*.{ts,js}\"",
     "format": "npm run lint -- --fix",
     "precommit": "lint-staged"
   },
   "lint-staged": {
-    "{lib,src,test}/**/*.{ts,js}": [
+    "{lib,src,test}/*.{ts,js}": [
       "tslint --project tsconfig.json --fix",
       "git add"
     ]

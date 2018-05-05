@@ -44,7 +44,7 @@ export class SymbolTable {
     return this.scopes[0];
   }
 
-  withScope(scopeName: string, body: (scope: Scope) => void): void {
+  withScope(scopeName: string | undefined, body: (scope: Scope) => void): void {
     const scope = new Scope(scopeName);
     this.scopes.push(scope);
     body(scope);

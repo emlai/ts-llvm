@@ -4,6 +4,8 @@ import { error } from "./diagnostics";
 
 export function getLLVMType(node: ts.TypeNode, context: llvm.LLVMContext): llvm.Type {
   switch (node.kind) {
+    case ts.SyntaxKind.BooleanKeyword:
+      return llvm.Type.getInt1Ty(context);
     case ts.SyntaxKind.NumberKeyword:
       return llvm.Type.getDoubleTy(context);
     case ts.SyntaxKind.StringKeyword:

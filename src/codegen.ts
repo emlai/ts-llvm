@@ -48,8 +48,14 @@ class LLVMGenerator {
       case ts.SyntaxKind.ModuleDeclaration:
         this.emitModuleDeclaration(node as ts.ModuleDeclaration, parentScope);
         break;
+      case ts.SyntaxKind.Block:
+        this.emitBlock(node as ts.Block);
+        break;
       case ts.SyntaxKind.ExpressionStatement:
         this.emitExpressionStatement(node as ts.ExpressionStatement);
+        break;
+      case ts.SyntaxKind.IfStatement:
+        this.emitIfStatement(node as ts.IfStatement, parentScope);
         break;
       case ts.SyntaxKind.ReturnStatement:
         this.emitReturnStatement(node as ts.ReturnStatement);
@@ -86,7 +92,11 @@ class LLVMGenerator {
         body.forEachChild(node => this.emitNode(node, bodyScope));
 
         if (!this.builder.getInsertBlock().getTerminator()) {
-          this.builder.createRetVoid();
+          if (returnType.isVoidTy()) {
+            this.builder.createRetVoid();
+          } else {
+            // TODO: Emit LLVM 'unreachable' instruction.
+          }
         }
       });
     }
@@ -102,8 +112,44 @@ class LLVMGenerator {
     parentScope.set(name, scope);
   }
 
+  emitBlock(block: ts.Block): void {
+    this.symbolTable.withScope(undefined, scope => {
+      for (const statement of block.statements) {
+        this.emitNode(statement, scope);
+      }
+    });
+  }
+
+  emitFoo(
+    block: ts.Statement | undefined,
+    destination: llvm.BasicBlock,
+    continuation: llvm.BasicBlock,
+    parentScope: Scope
+  ): void {
+    this.builder.setInsertionPoint(destination);
+
+    if (block) {
+      this.emitNode(block, parentScope);
+    }
+
+    if (!this.builder.getInsertBlock().getTerminator()) {
+      this.builder.createBr(continuation);
+    }
+  }
+
   emitExpressionStatement(statement: ts.ExpressionStatement): void {
     this.emitExpression(statement.expression);
+  }
+
+  emitIfStatement(statement: ts.IfStatement, parentScope: Scope): void {
+    const condition = this.emitExpression(statement.expression);
+    const thenBlock = llvm.BasicBlock.create(this.context, "then", this.currentFunction);
+    const elseBlock = llvm.BasicBlock.create(this.context, "else", this.currentFunction);
+    const endBlock = llvm.BasicBlock.create(this.context, "endif", this.currentFunction);
+    this.builder.createCondBr(condition, thenBlock, elseBlock);
+    this.emitFoo(statement.thenStatement, thenBlock, endBlock, parentScope);
+    this.emitFoo(statement.elseStatement, elseBlock, endBlock, parentScope);
+    this.builder.setInsertionPoint(endBlock);
   }
 
   emitReturnStatement(statement: ts.ReturnStatement): void {
@@ -144,6 +190,9 @@ class LLVMGenerator {
         return this.emitPropertyAccessExpression(expression as ts.PropertyAccessExpression);
       case ts.SyntaxKind.Identifier:
         return this.emitIdentifier(expression as ts.Identifier);
+      case ts.SyntaxKind.TrueKeyword:
+      case ts.SyntaxKind.FalseKeyword:
+        return this.emitBooleanLiteral(expression as ts.BooleanLiteral);
       case ts.SyntaxKind.StringLiteral:
         return this.emitStringLiteral(expression as ts.StringLiteral);
       default:
@@ -191,6 +240,14 @@ class LLVMGenerator {
     return this.symbolTable.get(expression.text) as llvm.Value;
   }
 
+  emitBooleanLiteral(expression: ts.BooleanLiteral): llvm.Value {
+    if (expression.kind === ts.SyntaxKind.TrueKeyword) {
+      return llvm.ConstantInt.getTrue(this.context);
+    } else {
+      return llvm.ConstantInt.getFalse(this.context);
+    }
+  }
+
   emitStringLiteral(expression: ts.StringLiteral): llvm.Value {
     const ptr = this.builder.createGlobalStringPtr(expression.text) as llvm.Constant;
     const length = llvm.ConstantInt.get(this.context, expression.text.length);
@@ -205,9 +262,12 @@ class LLVMGenerator {
   }
 
   createEntryBlockAlloca(type: llvm.Type, name: string): llvm.AllocaInst {
-    const currentFunction = this.builder.getInsertBlock().parent!;
-    const builder = new llvm.IRBuilder(currentFunction.getEntryBlock()!);
+    const builder = new llvm.IRBuilder(this.currentFunction.getEntryBlock()!);
     const arraySize = undefined;
     return builder.createAlloca(type, arraySize, name);
+  }
+
+  get currentFunction(): llvm.Function {
+    return this.builder.getInsertBlock().parent!;
   }
 }

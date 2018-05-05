@@ -4,6 +4,7 @@ import * as ts from "typescript";
 import { error, warn } from "./diagnostics";
 import { mangleFunctionDeclaration } from "./mangle";
 import { Scope, SymbolTable } from "./symbol-table";
+import { isConst } from "./tsc-utils";
 import { getLLVMType, getStringType } from "./types";
 
 export function emitLLVM(program: ts.Program): llvm.Module {
@@ -52,6 +53,9 @@ class LLVMGenerator {
         break;
       case ts.SyntaxKind.ReturnStatement:
         this.emitReturnStatement(node as ts.ReturnStatement);
+        break;
+      case ts.SyntaxKind.VariableStatement:
+        this.emitVariableStatement(node as ts.VariableStatement, parentScope);
         break;
       case ts.SyntaxKind.EndOfFileToken:
         break;
@@ -104,9 +108,29 @@ class LLVMGenerator {
 
   emitReturnStatement(statement: ts.ReturnStatement): void {
     if (statement.expression) {
-      this.builder.createRet(this.emitExpression(statement.expression));
+      this.builder.createRet(this.createLoadIfAlloca(this.emitExpression(statement.expression)));
     } else {
       this.builder.createRetVoid();
+    }
+  }
+
+  emitVariableStatement(statement: ts.VariableStatement, parentScope: Scope): void {
+    for (const declaration of statement.declarationList.declarations) {
+      // TODO: Handle destructuring declarations.
+      const name = declaration.name.getText();
+      const initializer = this.createLoadIfAlloca(this.emitExpression(declaration.initializer!));
+
+      if (isConst(declaration)) {
+        if (!initializer.hasName()) {
+          initializer.name = name;
+        }
+        parentScope.set(name, initializer);
+      } else {
+        const type = this.checker.typeToTypeNode(this.checker.getTypeAtLocation(declaration));
+        const alloca = this.createEntryBlockAlloca(getLLVMType(type, this.context), name);
+        this.builder.createStore(initializer, alloca);
+        parentScope.set(name, alloca);
+      }
     }
   }
 
@@ -132,8 +156,10 @@ class LLVMGenerator {
     const right = this.emitExpression(expression.right);
 
     switch (expression.operatorToken.kind) {
+      case ts.SyntaxKind.EqualsToken:
+        return this.builder.createStore(this.createLoadIfAlloca(right), left);
       case ts.SyntaxKind.PlusToken:
-        return this.builder.createFAdd(left, right);
+        return this.builder.createFAdd(this.createLoadIfAlloca(left), this.createLoadIfAlloca(right));
       default:
         return error(`Unhandled ts.BinaryExpression operator '${ts.SyntaxKind[expression.operatorToken.kind]}'`);
     }
@@ -169,5 +195,19 @@ class LLVMGenerator {
     const ptr = this.builder.createGlobalStringPtr(expression.text) as llvm.Constant;
     const length = llvm.ConstantInt.get(this.context, expression.text.length);
     return llvm.ConstantStruct.get(getStringType(this.context), [ptr, length]);
+  }
+
+  createLoadIfAlloca(value: llvm.Value): llvm.Value {
+    if (value instanceof llvm.AllocaInst) {
+      return this.builder.createLoad(value);
+    }
+    return value;
+  }
+
+  createEntryBlockAlloca(type: llvm.Type, name: string): llvm.AllocaInst {
+    const currentFunction = this.builder.getInsertBlock().parent!;
+    const builder = new llvm.IRBuilder(currentFunction.getEntryBlock()!);
+    const arraySize = undefined;
+    return builder.createAlloca(type, arraySize, name);
   }
 }

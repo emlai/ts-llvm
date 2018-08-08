@@ -31,6 +31,16 @@ export class SymbolTable {
   }
 
   get(identifier: string): llvm.Value | Scope {
+    const parts = identifier.split(".");
+
+    if (parts.length > 1) {
+      const scope = this.get(parts[0]);
+      if (!(scope instanceof Scope)) {
+        return error(`'${parts[0]}' is not a namespace`);
+      }
+      return scope.get(parts.slice(1).join("."));
+    }
+
     for (const scope of R.reverse(this.scopes)) {
       const value = scope.getOptional(identifier);
       if (value) {

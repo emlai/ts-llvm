@@ -1,11 +1,14 @@
 import * as llvm from "llvm-node";
 import * as R from "ramda";
 import * as ts from "typescript";
+import { getBuiltin } from "./builtins";
 import { error, warn } from "./diagnostics";
 import { mangleFunctionDeclaration } from "./mangle";
+import { getSize } from "./memory-layout";
 import { Scope, SymbolTable } from "./symbol-table";
 import { isConst } from "./tsc-utils";
 import { getLLVMType, getStringType } from "./types";
+import { createLLVMFunction } from "./utils";
 
 export function emitLLVM(program: ts.Program): llvm.Module {
   const checker = program.getTypeChecker();
@@ -66,18 +69,18 @@ class LLVMGenerator {
       case ts.SyntaxKind.EndOfFileToken:
         break;
       default:
-        warn(`Unhandled ts.Node '${ts.SyntaxKind[node.kind]}'`);
+        warn(`Unhandled ts.Node '${ts.SyntaxKind[node.kind]}': ${node.getText()}`);
     }
   }
 
   emitFunctionDeclaration(declaration: ts.FunctionDeclaration, parentScope: Scope): void {
     const signature = this.checker.getSignatureFromDeclaration(declaration)!;
-    const returnType = getLLVMType(this.checker.typeToTypeNode(signature.getReturnType()), this.context);
-    const parameterTypes = declaration.parameters.map(parameter => getLLVMType(parameter.type!, this.context));
-    const type = llvm.FunctionType.get(returnType, parameterTypes, false);
-    const linkage = llvm.LinkageTypes.ExternalLinkage;
+    const returnType = getLLVMType(this.checker.typeToTypeNode(signature.getReturnType()), this.context, this.checker);
+    const parameterTypes = declaration.parameters.map(parameter =>
+      getLLVMType(parameter.type!, this.context, this.checker)
+    );
     const qualifiedName = mangleFunctionDeclaration(declaration, parentScope);
-    const func = llvm.Function.create(type, linkage, qualifiedName, this.module);
+    const func = createLLVMFunction(returnType, parameterTypes, qualifiedName, this.module);
     const body = declaration.body;
 
     if (body) {
@@ -173,7 +176,7 @@ class LLVMGenerator {
         parentScope.set(name, initializer);
       } else {
         const type = this.checker.typeToTypeNode(this.checker.getTypeAtLocation(declaration));
-        const alloca = this.createEntryBlockAlloca(getLLVMType(type, this.context), name);
+        const alloca = this.createEntryBlockAlloca(getLLVMType(type, this.context, this.checker), name);
         this.builder.createStore(initializer, alloca);
         parentScope.set(name, alloca);
       }
@@ -193,8 +196,12 @@ class LLVMGenerator {
       case ts.SyntaxKind.TrueKeyword:
       case ts.SyntaxKind.FalseKeyword:
         return this.emitBooleanLiteral(expression as ts.BooleanLiteral);
+      case ts.SyntaxKind.NumericLiteral:
+        return this.emitNumericLiteral(expression as ts.NumericLiteral);
       case ts.SyntaxKind.StringLiteral:
         return this.emitStringLiteral(expression as ts.StringLiteral);
+      case ts.SyntaxKind.ObjectLiteralExpression:
+        return this.emitObjectLiteralExpression(expression as ts.ObjectLiteralExpression);
       default:
         return error(`Unhandled ts.Expression '${ts.SyntaxKind[expression.kind]}'`);
     }
@@ -248,10 +255,43 @@ class LLVMGenerator {
     }
   }
 
+  emitNumericLiteral(expression: ts.NumericLiteral): llvm.Value {
+    return llvm.ConstantFP.get(this.context, parseFloat(expression.text));
+  }
+
   emitStringLiteral(expression: ts.StringLiteral): llvm.Value {
     const ptr = this.builder.createGlobalStringPtr(expression.text) as llvm.Constant;
     const length = llvm.ConstantInt.get(this.context, expression.text.length);
     return llvm.ConstantStruct.get(getStringType(this.context), [ptr, length]);
+  }
+
+  emitObjectLiteralExpression(expression: ts.ObjectLiteralExpression): llvm.Value {
+    let size = 0;
+    for (const property of expression.properties) {
+      size += getSize(this.checker.getTypeAtLocation(property), this.checker, this.context);
+    }
+    const allocate = getBuiltin("gc__allocate", this.context, this.module);
+    const returnValue = this.builder.createCall(allocate, [llvm.ConstantInt.get(this.context, size)]);
+    const typeNode = this.checker.typeToTypeNode(this.checker.getTypeAtLocation(expression));
+    const object = this.builder.createBitCast(returnValue, getLLVMType(typeNode, this.context, this.checker));
+
+    let propertyIndex = 0;
+    for (const property of expression.properties) {
+      switch (property.kind) {
+        case ts.SyntaxKind.PropertyAssignment:
+          const value = this.emitExpression((property as ts.PropertyAssignment).initializer);
+          const pointer = this.builder.createInBoundsGEP(object, [
+            llvm.ConstantInt.get(this.context, 0),
+            llvm.ConstantInt.get(this.context, propertyIndex++)
+          ]);
+          this.builder.createStore(value, pointer);
+          break;
+        default:
+          return error(`Unhandled ts.ObjectLiteralElementLike '${ts.SyntaxKind[property.kind]}'`);
+      }
+    }
+
+    return object;
   }
 
   createLoadIfAlloca(value: llvm.Value): llvm.Value {

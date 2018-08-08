@@ -19,9 +19,6 @@ See the Apache Version 2.0 License for specific language governing permissions
 and limitations under the License.
 ***************************************************************************** */
 
-export function isConst(node: ts.Node): boolean {
-  return (
-    !!(ts.getCombinedNodeFlags(node) & ts.NodeFlags.Const) ||
-    !!(ts.getCombinedModifierFlags(node) & ts.ModifierFlags.Const)
-  );
+export function isVarConst(node: ts.VariableDeclaration | ts.VariableDeclarationList): boolean {
+  return !!(ts.getCombinedNodeFlags(node) & ts.NodeFlags.Const);
 }

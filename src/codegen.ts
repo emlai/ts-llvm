@@ -6,7 +6,7 @@ import { error, warn } from "./diagnostics";
 import { mangleFunctionDeclaration } from "./mangle";
 import { getSize } from "./memory-layout";
 import { Scope, SymbolTable } from "./symbol-table";
-import { isConst } from "./tsc-utils";
+import { isVarConst } from "./tsc-utils";
 import { getLLVMType, getStringType } from "./types";
 import { createLLVMFunction } from "./utils";
 
@@ -75,7 +75,7 @@ class LLVMGenerator {
 
   emitFunctionDeclaration(declaration: ts.FunctionDeclaration, parentScope: Scope): void {
     const signature = this.checker.getSignatureFromDeclaration(declaration)!;
-    const returnType = getLLVMType(this.checker.typeToTypeNode(signature.getReturnType()), this.context, this.checker);
+    const returnType = getLLVMType(this.checker.typeToTypeNode(signature.getReturnType())!, this.context, this.checker);
     const parameterTypes = declaration.parameters.map(parameter =>
       getLLVMType(parameter.type!, this.context, this.checker)
     );
@@ -169,13 +169,13 @@ class LLVMGenerator {
       const name = declaration.name.getText();
       const initializer = this.createLoadIfAlloca(this.emitExpression(declaration.initializer!));
 
-      if (isConst(declaration)) {
+      if (isVarConst(declaration)) {
         if (!initializer.hasName()) {
           initializer.name = name;
         }
         parentScope.set(name, initializer);
       } else {
-        const type = this.checker.typeToTypeNode(this.checker.getTypeAtLocation(declaration));
+        const type = this.checker.typeToTypeNode(this.checker.getTypeAtLocation(declaration))!;
         const alloca = this.createEntryBlockAlloca(getLLVMType(type, this.context, this.checker), name);
         this.builder.createStore(initializer, alloca);
         parentScope.set(name, alloca);
@@ -272,7 +272,7 @@ class LLVMGenerator {
     }
     const allocate = getBuiltin("gc__allocate", this.context, this.module);
     const returnValue = this.builder.createCall(allocate, [llvm.ConstantInt.get(this.context, size)]);
-    const typeNode = this.checker.typeToTypeNode(this.checker.getTypeAtLocation(expression));
+    const typeNode = this.checker.typeToTypeNode(this.checker.getTypeAtLocation(expression))!;
     const object = this.builder.createBitCast(returnValue, getLLVMType(typeNode, this.context, this.checker));
 
     let propertyIndex = 0;

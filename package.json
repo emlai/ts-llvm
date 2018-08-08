@@ -39,11 +39,11 @@
     "commander": "^2.15.1",
     "llvm-node": "emlai/llvm-node",
     "ramda": "^0.25.0",
-    "typescript": "^2.8.3"
+    "typescript": "^3.0.1"
   },
   "devDependencies": {
     "@types/node": "^9.6.9",
-    "@types/ramda": "^0.25.24",
+    "@types/ramda": "^0.25.36",
     "chalk": "^2.4.1",
     "diff": "^3.5.0",
     "husky": "^0.14.3",

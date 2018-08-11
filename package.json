@@ -37,7 +37,7 @@
   "homepage": "https://github.com/emlai/ts-llvm",
   "dependencies": {
     "commander": "^2.15.1",
-    "llvm-node": "emlai/llvm-node",
+    "llvm-node": "^2.0.6",
     "ramda": "^0.25.0",
     "typescript": "^3.0.1"
   },

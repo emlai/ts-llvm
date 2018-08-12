@@ -15,21 +15,30 @@ export function emitLLVM(program: ts.Program): llvm.Module {
   const context = new llvm.LLVMContext();
   const module = new llvm.Module("main", context);
   const generator = new LLVMGenerator(checker, module, context);
+  const { builder } = generator;
 
+  const mainReturnType = llvm.Type.getInt32Ty(context);
+  const main = createLLVMFunction(mainReturnType, [], "main", module);
+  llvm.BasicBlock.create(context, "entry", main);
+
+  // TODO: Emit top-level statements in correct order to main function when there are multiple source files.
   for (const sourceFile of program.getSourceFiles()) {
     generator.emitSourceFile(sourceFile);
   }
+
+  builder.setInsertionPoint(R.last(main.getBasicBlocks())!);
+  builder.createRet(llvm.Constant.getNullValue(mainReturnType));
 
   llvm.verifyModule(module);
   return module;
 }
 
 class LLVMGenerator {
-  private readonly checker: ts.TypeChecker;
-  private readonly module: llvm.Module;
-  private readonly context: llvm.LLVMContext;
-  private readonly builder: llvm.IRBuilder;
-  private readonly symbolTable: SymbolTable;
+  readonly checker: ts.TypeChecker;
+  readonly module: llvm.Module;
+  readonly context: llvm.LLVMContext;
+  readonly builder: llvm.IRBuilder;
+  readonly symbolTable: SymbolTable;
 
   constructor(checker: ts.TypeChecker, module: llvm.Module, context: llvm.LLVMContext) {
     this.checker = checker;
@@ -44,6 +53,18 @@ class LLVMGenerator {
   }
 
   emitNode(node: ts.Node, parentScope: Scope): void {
+    switch (node.kind) {
+      case ts.SyntaxKind.Block:
+      case ts.SyntaxKind.ExpressionStatement:
+      case ts.SyntaxKind.IfStatement:
+      case ts.SyntaxKind.ReturnStatement:
+      case ts.SyntaxKind.VariableStatement:
+        if (parentScope === this.symbolTable.globalScope) {
+          this.builder.setInsertionPoint(R.last(this.module.getFunction("main").getBasicBlocks())!);
+        }
+        break;
+    }
+
     switch (node.kind) {
       case ts.SyntaxKind.FunctionDeclaration:
         this.emitFunctionDeclaration(node as ts.FunctionDeclaration, parentScope);

@@ -2,6 +2,11 @@
 
 @0 = private unnamed_addr constant [4 x i8] c"foo\00"
 
+define i32 @main() {
+entry:
+  ret i32 0
+}
+
 declare void @console__log(%string)
 
 define void @foo() {

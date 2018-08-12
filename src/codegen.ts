@@ -123,7 +123,7 @@ class LLVMGenerator {
     });
   }
 
-  emitFoo(
+  emitIfBranch(
     block: ts.Statement | undefined,
     destination: llvm.BasicBlock,
     continuation: llvm.BasicBlock,
@@ -150,8 +150,8 @@ class LLVMGenerator {
     const elseBlock = llvm.BasicBlock.create(this.context, "else", this.currentFunction);
     const endBlock = llvm.BasicBlock.create(this.context, "endif", this.currentFunction);
     this.builder.createCondBr(condition, thenBlock, elseBlock);
-    this.emitFoo(statement.thenStatement, thenBlock, endBlock, parentScope);
-    this.emitFoo(statement.elseStatement, elseBlock, endBlock, parentScope);
+    this.emitIfBranch(statement.thenStatement, thenBlock, endBlock, parentScope);
+    this.emitIfBranch(statement.elseStatement, elseBlock, endBlock, parentScope);
     this.builder.setInsertionPoint(endBlock);
   }
 

@@ -9,11 +9,8 @@
     "max-classes-per-file": false,
     "member-access": [true, "no-public"],
     "no-console": false,
+    "no-implicit-dependencies": false,
     "prefer-readonly": true,
-    "prettier": true
-  },
-  "jsRules": {
-    "no-console": false,
     "prettier": true
   },
   "rulesDirectory": ["tslint-plugin-prettier"]

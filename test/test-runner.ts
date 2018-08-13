@@ -1,11 +1,12 @@
-const fs = require("fs");
-const path = require("path");
-const { spawnSync } = require("child_process");
-const { diffLines } = require("diff");
-const { green, red } = require("chalk");
-const { replaceExtension } = require("../build/utils");
+import chalk from "chalk";
+import { spawnSync } from "child_process";
+import { diffLines } from "diff";
+import * as fs from "fs";
+import * as path from "path";
+import { replaceExtension } from "../src/utils";
+const { green, red } = chalk;
 
-let tests = fs.readdirSync(path.join(__dirname, "cases")).filter(file => file.endsWith(".ts"));
+const tests = fs.readdirSync(path.join(__dirname, "cases")).filter(file => file.endsWith(".ts"));
 
 const failedTests = tests.filter(file => {
   const compilerPath = path.join(__dirname, "..", "src", "main.ts");
@@ -17,10 +18,12 @@ const failedTests = tests.filter(file => {
   let error;
 
   try {
-    expectedOutput = fs.readFileSync(outputFile);
+    expectedOutput = fs.readFileSync(outputFile).toString();
     const { stdout, stderr } = spawnSync(testCommand[0], testCommand.slice(1));
-    output = Buffer.concat([stdout, stderr].filter(Boolean));
+    output = stdout + stderr;
   } catch (err) {
+    expectedOutput = expectedOutput || "";
+    output = output || "";
     error = err;
   }
 
@@ -49,6 +52,8 @@ const failedTests = tests.filter(file => {
       throw err;
     }
   });
+
+  return undefined;
 });
 
 if (failedTests.length > 0) {

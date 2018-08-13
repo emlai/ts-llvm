@@ -8,10 +8,10 @@ const { replaceExtension } = require("../build/utils");
 let tests = fs.readdirSync(path.join(__dirname, "cases")).filter(file => file.endsWith(".ts"));
 
 const failedTests = tests.filter(file => {
-  const compilerPath = path.join(__dirname, "..", "build", "main.js");
+  const compilerPath = path.join(__dirname, "..", "src", "main.ts");
   const inputFile = path.join(__dirname, "cases", file);
   const outputFile = path.join(__dirname, "cases", replaceExtension(file, ".ll"));
-  const testCommand = ["node", compilerPath, inputFile, "--printIR"];
+  const testCommand = ["ts-node", compilerPath, inputFile, "--printIR"];
   let expectedOutput;
   let output;
   let error;
@@ -40,7 +40,7 @@ const failedTests = tests.filter(file => {
     return file;
   }
 
-  const compileCommand = ["node", compilerPath, inputFile];
+  const compileCommand = ["ts-node", compilerPath, inputFile];
   spawnSync(compileCommand[0], compileCommand.slice(1));
   const executable = replaceExtension(file, "");
   spawnSync(executable);

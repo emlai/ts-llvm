@@ -39,6 +39,16 @@ const failedTests = tests.filter(file => {
 
     return file;
   }
+
+  const compileCommand = ["node", compilerPath, inputFile];
+  spawnSync(compileCommand[0], compileCommand.slice(1));
+  const executable = replaceExtension(file, "");
+  spawnSync(executable);
+  fs.unlink(executable, err => {
+    if (err) {
+      throw err;
+    }
+  });
 });
 
 if (failedTests.length > 0) {

@@ -47,11 +47,7 @@ const failedTests = tests.filter(file => {
   spawnSync(compileCommand[0], compileCommand.slice(1));
   const executable = replaceExtension(file, "");
   spawnSync(executable);
-  fs.unlink(executable, err => {
-    if (err) {
-      throw err;
-    }
-  });
+  fs.unlink(executable, () => undefined);
 
   return undefined;
 });

@@ -2,7 +2,6 @@
   "name": "ts-llvm",
   "version": "0.0.0",
   "description": "TypeScript to LLVM compiler",
-  "main": "index.js",
   "scripts": {
     "build": "tsc",
     "start": "ts-node src/main.ts",

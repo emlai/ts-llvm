@@ -3,5 +3,6 @@ import { Scope } from "./symbol-table";
 
 export function mangleFunctionDeclaration(declaration: ts.NamedDeclaration, parentScope: Scope): string {
   const scopePrefix = parentScope.name ? parentScope.name + "__" : "";
-  return scopePrefix + declaration.name!.getText();
+  const baseName = ts.isConstructorDeclaration(declaration) ? "constructor" : declaration.name!.getText();
+  return scopePrefix + baseName;
 }

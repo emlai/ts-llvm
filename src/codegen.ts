@@ -71,6 +71,9 @@ class LLVMGenerator {
       case ts.SyntaxKind.MethodDeclaration:
         this.emitFunctionDeclaration(node as ts.MethodDeclaration, parentScope);
         break;
+      case ts.SyntaxKind.Constructor:
+        this.emitFunctionDeclaration(node as ts.ConstructorDeclaration, parentScope);
+        break;
       case ts.SyntaxKind.ClassDeclaration:
         this.emitClassDeclaration(node as ts.ClassDeclaration, parentScope);
         break;
@@ -100,9 +103,19 @@ class LLVMGenerator {
     }
   }
 
-  emitFunctionDeclaration(declaration: ts.FunctionDeclaration | ts.MethodDeclaration, parentScope: Scope): void {
+  emitFunctionDeclaration(
+    declaration: ts.FunctionDeclaration | ts.MethodDeclaration | ts.ConstructorDeclaration,
+    parentScope: Scope
+  ): void {
+    const isConstructor = ts.isConstructorDeclaration(declaration);
+    const thisType = isConstructor
+      ? (this.symbolTable.get((declaration as ts.ConstructorDeclaration).parent.name!.text) as Scope).structType!
+      : undefined;
+    let thisValue: llvm.Value;
     const signature = this.checker.getSignatureFromDeclaration(declaration)!;
-    const returnType = getLLVMType(this.checker.typeToTypeNode(signature.getReturnType())!, this.context, this.checker);
+    const returnType = isConstructor
+      ? thisType!.getPointerTo()
+      : getLLVMType(this.checker.typeToTypeNode(signature.getReturnType())!, this.context, this.checker);
     const parameterTypes = declaration.parameters.map(parameter =>
       getLLVMType(parameter.type!, this.context, this.checker)
     );
@@ -119,11 +132,19 @@ class LLVMGenerator {
 
         const entryBlock = llvm.BasicBlock.create(this.context, "entry", func);
         this.builder.setInsertionPoint(entryBlock);
+
+        if (isConstructor) {
+          thisValue = createGCAllocate(thisType!, this.context, this.module, this.builder, this.checker);
+          bodyScope.set("this", thisValue);
+        }
+
         body.forEachChild(node => this.emitNode(node, bodyScope));
 
         if (!this.builder.getInsertBlock().getTerminator()) {
           if (returnType.isVoidTy()) {
             this.builder.createRetVoid();
+          } else if (isConstructor) {
+            this.builder.createRet(thisValue);
           } else {
             // TODO: Emit LLVM 'unreachable' instruction.
           }
@@ -132,7 +153,8 @@ class LLVMGenerator {
     }
 
     llvm.verifyFunction(func);
-    parentScope.set(declaration.name!.getText(), func);
+    const name = isConstructor ? "constructor" : declaration.name!.getText();
+    parentScope.set(name, func);
   }
 
   emitClassDeclaration(declaration: ts.ClassDeclaration, parentScope: Scope): void {
@@ -144,10 +166,10 @@ class LLVMGenerator {
     type.setBody(members);
 
     const scope = new Scope(name, type);
+    parentScope.set(name, scope);
     for (const method of declaration.members.filter(member => !ts.isPropertyDeclaration(member))) {
       this.emitNode(method, scope);
     }
-    parentScope.set(name, scope);
   }
 
   emitModuleDeclaration(declaration: ts.ModuleDeclaration, parentScope: Scope): void {
@@ -339,8 +361,9 @@ class LLVMGenerator {
 
   emitNewExpression(expression: ts.NewExpression): llvm.Value {
     const typeName = (expression.expression as ts.Identifier).getText();
-    const type = (this.symbolTable.get(typeName) as Scope).structType!;
-    return createGCAllocate(type, this.context, this.module, this.builder, this.checker);
+    const constructor = (this.symbolTable.get(typeName) as Scope).get("constructor") as llvm.Value;
+    const args = expression.arguments!.map(argument => this.emitExpression(argument));
+    return this.builder.createCall(constructor, args);
   }
 
   createLoadIfAlloca(value: llvm.Value): llvm.Value {

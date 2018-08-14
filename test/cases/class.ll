@@ -5,12 +5,22 @@
 
 define i32 @main() {
 entry:
-  %0 = call i8* @gc__allocate(i32 16)
-  %a = bitcast i8* %0 to %A*
+  %a = call %A* @A__constructor(double 4.000000e+00)
   ret i32 0
 }
 
 declare void @console__log(%string)
+
+define %A* @A__constructor(double %b) {
+entry:
+  %a = alloca double
+  %0 = call i8* @gc__allocate(i32 16)
+  %1 = bitcast i8* %0 to %A*
+  store double %b, double* %a
+  ret %A* %1
+}
+
+declare i8* @gc__allocate(i32)
 
 define void @A__a() {
 entry:

@@ -3,8 +3,9 @@ class A {
   c: number;
 
   constructor(b: number) {
-    this.b = b;
-    this.c = 0;
+    // this.b = b;
+    // this.c = 0;
+    let a = b;
   }
 
   a() {

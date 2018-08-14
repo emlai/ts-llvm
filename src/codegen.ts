@@ -7,7 +7,7 @@ import { mangleFunctionDeclaration } from "./mangle";
 import { Scope, SymbolTable } from "./symbol-table";
 import { isVarConst } from "./tsc-utils";
 import { getLLVMType, getStringType } from "./types";
-import { createLLVMFunction } from "./utils";
+import { createLLVMFunction, getMemberIndex, isValueType } from "./utils";
 
 export function emitLLVM(program: ts.Program): llvm.Module {
   const checker = program.getTypeChecker();
@@ -109,7 +109,7 @@ class LLVMGenerator {
   ): void {
     const isConstructor = ts.isConstructorDeclaration(declaration);
     const thisType = isConstructor
-      ? (this.symbolTable.get((declaration as ts.ConstructorDeclaration).parent.name!.text) as Scope).structType!
+      ? (this.symbolTable.get((declaration as ts.ConstructorDeclaration).parent.name!.text) as Scope).data!.type
       : undefined;
     let thisValue: llvm.Value;
     const signature = this.checker.getSignatureFromDeclaration(declaration)!;
@@ -165,7 +165,7 @@ class LLVMGenerator {
       .map(member => getLLVMType((member as ts.PropertyDeclaration).type!, this.context, this.checker));
     type.setBody(members);
 
-    const scope = new Scope(name, type);
+    const scope = new Scope(name, { declaration, type });
     parentScope.set(name, scope);
     for (const method of declaration.members.filter(member => !ts.isPropertyDeclaration(member))) {
       this.emitNode(method, scope);
@@ -221,7 +221,7 @@ class LLVMGenerator {
 
   emitReturnStatement(statement: ts.ReturnStatement): void {
     if (statement.expression) {
-      this.builder.createRet(this.createLoadIfAlloca(this.emitExpression(statement.expression)));
+      this.builder.createRet(this.createLoadIfAllocaOrPointerToValueType(this.emitExpression(statement.expression)));
     } else {
       this.builder.createRetVoid();
     }
@@ -231,7 +231,7 @@ class LLVMGenerator {
     for (const declaration of statement.declarationList.declarations) {
       // TODO: Handle destructuring declarations.
       const name = declaration.name.getText();
-      const initializer = this.createLoadIfAlloca(this.emitExpression(declaration.initializer!));
+      const initializer = this.createLoadIfAllocaOrPointerToValueType(this.emitExpression(declaration.initializer!));
 
       if (isVarConst(declaration)) {
         if (!initializer.hasName()) {
@@ -279,9 +279,12 @@ class LLVMGenerator {
 
     switch (expression.operatorToken.kind) {
       case ts.SyntaxKind.EqualsToken:
-        return this.builder.createStore(this.createLoadIfAlloca(right), left);
+        return this.builder.createStore(this.createLoadIfAllocaOrPointerToValueType(right), left);
       case ts.SyntaxKind.PlusToken:
-        return this.builder.createFAdd(this.createLoadIfAlloca(left), this.createLoadIfAlloca(right));
+        return this.builder.createFAdd(
+          this.createLoadIfAllocaOrPointerToValueType(left),
+          this.createLoadIfAllocaOrPointerToValueType(right)
+        );
       default:
         return error(`Unhandled ts.BinaryExpression operator '${ts.SyntaxKind[expression.operatorToken.kind]}'`);
     }
@@ -297,16 +300,30 @@ class LLVMGenerator {
     const left = expression.expression;
     const propertyName = expression.name.text;
 
-    // TODO: Handle arbitrarily long namespace access chains.
-    if (ts.isIdentifier(left)) {
-      const value = this.symbolTable.get(left.text);
-      if (value instanceof Scope) {
-        return value.get(propertyName) as llvm.Value;
-      }
+    switch (left.kind) {
+      case ts.SyntaxKind.Identifier:
+        const value = this.symbolTable.get((left as ts.Identifier).text);
+        if (value instanceof Scope) {
+          return value.get(propertyName) as llvm.Value;
+        }
+        return this.emitPropertyAccessGEP(propertyName, value);
+      case ts.SyntaxKind.ThisKeyword:
+        return this.emitPropertyAccessGEP(propertyName, this.symbolTable.get("this") as llvm.Value);
+      default:
+        return error(`Unhandled ts.LeftHandSideExpression '${ts.SyntaxKind[left.kind]}': ${left.getText()}`);
     }
+  }
 
-    // TODO: Implement object property access.
-    return error("Object property access not implemented yet");
+  emitPropertyAccessGEP(propertyName: string, value: llvm.Value): llvm.Value {
+    const typeName = ((value.type as llvm.PointerType).elementType as llvm.StructType).name;
+    if (!typeName) {
+      return error("Property access not implemented for anonymous object types");
+    }
+    const type = (this.symbolTable.get(typeName) as Scope).data!.declaration;
+    return this.builder.createInBoundsGEP(value, [
+      llvm.ConstantInt.get(this.context, 0),
+      llvm.ConstantInt.get(this.context, getMemberIndex(propertyName, type))
+    ]);
   }
 
   emitIdentifier(expression: ts.Identifier): llvm.Value {
@@ -366,8 +383,8 @@ class LLVMGenerator {
     return this.builder.createCall(constructor, args);
   }
 
-  createLoadIfAlloca(value: llvm.Value): llvm.Value {
-    if (value instanceof llvm.AllocaInst) {
+  createLoadIfAllocaOrPointerToValueType(value: llvm.Value): llvm.Value {
+    if (value instanceof llvm.AllocaInst || (value.type.isPointerTy() && isValueType(value.type.elementType))) {
       return this.builder.createLoad(value);
     }
     return value;

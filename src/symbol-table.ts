@@ -1,17 +1,23 @@
 import * as llvm from "llvm-node";
 import * as R from "ramda";
+import * as ts from "typescript";
 import { error } from "./diagnostics";
 
-type ScopeValue = llvm.Value | llvm.StructType | Scope;
+type ScopeValue = llvm.Value | Scope;
+
+interface ScopeData {
+  readonly declaration: ts.ClassDeclaration;
+  readonly type: llvm.StructType;
+}
 
 export class Scope extends Map<string, ScopeValue> {
   readonly name: string | undefined;
-  readonly structType: llvm.StructType | undefined;
+  readonly data: ScopeData | undefined;
 
-  constructor(name: string | undefined, structType?: llvm.StructType) {
+  constructor(name: string | undefined, data?: ScopeData) {
     super();
     this.name = name;
-    this.structType = structType;
+    this.data = data;
   }
 
   get(identifier: string): ScopeValue {

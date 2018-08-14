@@ -3,8 +3,8 @@ class A {
   c: number;
 
   constructor(b: number) {
-    // this.b = b;
-    // this.c = 0;
+    this.b = b;
+    this.c = 0;
     let a = b;
   }
 
@@ -14,3 +14,5 @@ class A {
 }
 
 const a = new A(4);
+a.c = 1;
+let x = a.b;

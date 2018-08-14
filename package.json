@@ -38,6 +38,7 @@
     "commander": "^2.15.1",
     "llvm-node": "^2.0.6",
     "ramda": "^0.25.0",
+    "segfault-handler": "^1.0.1",
     "typescript": "^3.0.1"
   },
   "devDependencies": {

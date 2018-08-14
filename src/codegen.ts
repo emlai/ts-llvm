@@ -108,9 +108,13 @@ class LLVMGenerator {
     parentScope: Scope
   ): void {
     const isConstructor = ts.isConstructorDeclaration(declaration);
-    const thisType = isConstructor
-      ? (this.symbolTable.get((declaration as ts.ConstructorDeclaration).parent.name!.text) as Scope).data!.type
-      : undefined;
+    const isMethod = ts.isMethodDeclaration(declaration);
+    let thisType: llvm.StructType | undefined;
+    if (isConstructor || isMethod) {
+      const parent = (declaration as ts.ConstructorDeclaration | ts.MethodDeclaration)
+        .parent as ts.ClassLikeDeclaration;
+      thisType = (this.symbolTable.get(parent.name!.text) as Scope).data!.type;
+    }
     let thisValue: llvm.Value;
     const signature = this.checker.getSignatureFromDeclaration(declaration)!;
     const returnType = isConstructor
@@ -119,15 +123,22 @@ class LLVMGenerator {
     const parameterTypes = declaration.parameters.map(parameter =>
       getLLVMType(parameter.type!, this.context, this.checker)
     );
+    if (isMethod) {
+      parameterTypes.unshift(thisType!.getPointerTo());
+    }
     const qualifiedName = mangleFunctionDeclaration(declaration, parentScope);
     const func = createLLVMFunction(returnType, parameterTypes, qualifiedName, this.module);
     const body = declaration.body;
 
     if (body) {
       this.symbolTable.withScope(qualifiedName, bodyScope => {
-        for (const [parameter, argument] of R.zip(signature.parameters, func.getArguments())) {
-          argument.name = parameter.name;
-          bodyScope.set(parameter.name, argument);
+        const parameterNames = signature.parameters.map(parameter => parameter.name);
+        if (isMethod) {
+          parameterNames.unshift("this");
+        }
+        for (const [parameterName, argument] of R.zip(parameterNames, func.getArguments())) {
+          argument.name = parameterName;
+          bodyScope.set(parameterName, argument);
         }
 
         const entryBlock = llvm.BasicBlock.create(this.context, "entry", func);
@@ -293,6 +304,12 @@ class LLVMGenerator {
   emitCallExpression(expression: ts.CallExpression): llvm.Value {
     const callee = this.emitExpression(expression.expression);
     const args = expression.arguments.map(argument => this.emitExpression(argument));
+    const isMethod =
+      callee instanceof llvm.Function && callee.getArguments().length > 0 && callee.getArguments()[0].name === "this";
+    if (isMethod) {
+      const propertyAccess = expression.expression as ts.PropertyAccessExpression;
+      args.unshift(this.emitExpression(propertyAccess.expression));
+    }
     return this.builder.createCall(callee, args);
   }
 
@@ -319,7 +336,16 @@ class LLVMGenerator {
     if (!typeName) {
       return error("Property access not implemented for anonymous object types");
     }
-    const type = (this.symbolTable.get(typeName) as Scope).data!.declaration;
+    const typeScope = this.symbolTable.get(typeName) as Scope;
+    const type = typeScope.data!.declaration;
+
+    const method = type.members.find(
+      member => ts.isMethodDeclaration(member) && member.name.getText() === propertyName
+    );
+    if (method) {
+      return typeScope.get(propertyName) as llvm.Value;
+    }
+
     return this.builder.createInBoundsGEP(value, [
       llvm.ConstantInt.get(this.context, 0),
       llvm.ConstantInt.get(this.context, getMemberIndex(propertyName, type))

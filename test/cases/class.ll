@@ -12,6 +12,7 @@ entry:
   %1 = getelementptr inbounds %A, %A* %a, i32 0, i32 0
   %2 = load double, double* %1
   store double %2, double* %x
+  call void @A__a(%A* %a)
   ret i32 0
 }
 
@@ -32,8 +33,12 @@ entry:
 
 declare i8* @gc__allocate(i32)
 
-define void @A__a() {
+define void @A__a(%A* %this) {
 entry:
+  %0 = getelementptr inbounds %A, %A* %this, i32 0, i32 0
+  %1 = getelementptr inbounds %A, %A* %this, i32 0, i32 1
+  %2 = load double, double* %1
+  store double %2, double* %0
   call void @console__log(%string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @0, i32 0, i32 0), i32 3 })
   ret void
 }

@@ -9,6 +9,7 @@ class A {
   }
 
   a() {
+    this.b = this.c;
     console.log("foo");
   }
 }
@@ -16,3 +17,4 @@ class A {
 const a = new A(4);
 a.c = 1;
 let x = a.b;
+a.a();

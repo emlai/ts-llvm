@@ -88,6 +88,7 @@ class LLVMGenerator {
         this.emitVariableStatement(node as ts.VariableStatement, parentScope);
         break;
       case ts.SyntaxKind.EndOfFileToken:
+      case ts.SyntaxKind.InterfaceDeclaration:
         break;
       default:
         warn(`Unhandled ts.Node '${ts.SyntaxKind[node.kind]}': ${node.getText()}`);

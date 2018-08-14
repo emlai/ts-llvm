@@ -346,10 +346,11 @@ class LLVMGenerator {
       return typeScope.get(propertyName) as llvm.Value;
     }
 
-    return this.builder.createInBoundsGEP(value, [
+    const indexList = [
       llvm.ConstantInt.get(this.context, 0),
       llvm.ConstantInt.get(this.context, getMemberIndex(propertyName, type))
-    ]);
+    ];
+    return this.builder.createInBoundsGEP(value, indexList, propertyName);
   }
 
   emitIdentifier(expression: ts.Identifier): llvm.Value {
@@ -388,10 +389,11 @@ class LLVMGenerator {
       switch (property.kind) {
         case ts.SyntaxKind.PropertyAssignment:
           const value = this.emitExpression((property as ts.PropertyAssignment).initializer);
-          const pointer = this.builder.createInBoundsGEP(object, [
+          const indexList = [
             llvm.ConstantInt.get(this.context, 0),
             llvm.ConstantInt.get(this.context, propertyIndex++)
-          ]);
+          ];
+          const pointer = this.builder.createInBoundsGEP(object, indexList, property.name.getText());
           this.builder.createStore(value, pointer);
           break;
         default:

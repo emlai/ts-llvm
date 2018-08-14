@@ -21,7 +21,7 @@ export function getLLVMType(node: ts.TypeNode, context: llvm.LLVMContext, checke
             return error(`Unhandled ts.TypeElement '${ts.SyntaxKind[member.kind]}'`);
         }
       });
-      return llvm.StructType.get(context, elements).getPointerTo();
+      return llvm.StructType.get(context, elements);
     case ts.SyntaxKind.VoidKeyword:
       return llvm.Type.getVoidTy(context);
     case ts.SyntaxKind.AnyKeyword:

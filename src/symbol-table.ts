@@ -2,7 +2,9 @@ import * as llvm from "llvm-node";
 import * as R from "ramda";
 import { error } from "./diagnostics";
 
-export class Scope extends Map<string, llvm.Value | Scope> {
+type ScopeValue = llvm.Value | llvm.StructType | Scope;
+
+export class Scope extends Map<string, ScopeValue> {
   readonly name: string | undefined;
 
   constructor(name: string | undefined) {
@@ -10,7 +12,7 @@ export class Scope extends Map<string, llvm.Value | Scope> {
     this.name = name;
   }
 
-  get(identifier: string): llvm.Value | Scope {
+  get(identifier: string): ScopeValue {
     const value = this.getOptional(identifier);
     if (value) {
       return value;
@@ -18,7 +20,7 @@ export class Scope extends Map<string, llvm.Value | Scope> {
     return error(`Unknown identifier '${identifier}'`);
   }
 
-  getOptional(identifier: string): llvm.Value | Scope | undefined {
+  getOptional(identifier: string): ScopeValue | undefined {
     return super.get(identifier);
   }
 }
@@ -30,7 +32,7 @@ export class SymbolTable {
     this.scopes = [new Scope(undefined)];
   }
 
-  get(identifier: string): llvm.Value | Scope {
+  get(identifier: string): ScopeValue {
     const parts = identifier.split(".");
 
     if (parts.length > 1) {

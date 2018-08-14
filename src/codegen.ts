@@ -1,10 +1,9 @@
 import * as llvm from "llvm-node";
 import * as R from "ramda";
 import * as ts from "typescript";
-import { getBuiltin } from "./builtins";
+import { createGCAllocate } from "./builtins";
 import { error, warn } from "./diagnostics";
 import { mangleFunctionDeclaration } from "./mangle";
-import { getSize } from "./memory-layout";
 import { Scope, SymbolTable } from "./symbol-table";
 import { isVarConst } from "./tsc-utils";
 import { getLLVMType, getStringType } from "./types";
@@ -69,6 +68,9 @@ class LLVMGenerator {
       case ts.SyntaxKind.FunctionDeclaration:
         this.emitFunctionDeclaration(node as ts.FunctionDeclaration, parentScope);
         break;
+      case ts.SyntaxKind.ClassDeclaration:
+        this.emitClassDeclaration(node as ts.ClassDeclaration, parentScope);
+        break;
       case ts.SyntaxKind.ModuleDeclaration:
         this.emitModuleDeclaration(node as ts.ModuleDeclaration, parentScope);
         break;
@@ -128,6 +130,16 @@ class LLVMGenerator {
 
     llvm.verifyFunction(func);
     parentScope.set(declaration.name!.text, func);
+  }
+
+  emitClassDeclaration(declaration: ts.ClassDeclaration, parentScope: Scope): void {
+    const name = declaration.name!.text;
+    const type = llvm.StructType.create(this.context, name);
+    const members = declaration.members
+      .filter(ts.isPropertyDeclaration)
+      .map(member => getLLVMType((member as ts.PropertyDeclaration).type!, this.context, this.checker));
+    type.setBody(members);
+    parentScope.set(name, type);
   }
 
   emitModuleDeclaration(declaration: ts.ModuleDeclaration, parentScope: Scope): void {
@@ -224,6 +236,8 @@ class LLVMGenerator {
         return this.emitStringLiteral(expression as ts.StringLiteral);
       case ts.SyntaxKind.ObjectLiteralExpression:
         return this.emitObjectLiteralExpression(expression as ts.ObjectLiteralExpression);
+      case ts.SyntaxKind.NewExpression:
+        return this.emitNewExpression(expression as ts.NewExpression);
       default:
         return error(`Unhandled ts.Expression '${ts.SyntaxKind[expression.kind]}'`);
     }
@@ -288,14 +302,13 @@ class LLVMGenerator {
   }
 
   emitObjectLiteralExpression(expression: ts.ObjectLiteralExpression): llvm.Value {
-    let size = 0;
-    for (const property of expression.properties) {
-      size += getSize(this.checker.getTypeAtLocation(property), this.checker, this.context);
-    }
-    const allocate = getBuiltin("gc__allocate", this.context, this.module);
-    const returnValue = this.builder.createCall(allocate, [llvm.ConstantInt.get(this.context, size)]);
-    const typeNode = this.checker.typeToTypeNode(this.checker.getTypeAtLocation(expression))!;
-    const object = this.builder.createBitCast(returnValue, getLLVMType(typeNode, this.context, this.checker));
+    const object = createGCAllocate(
+      this.checker.getTypeAtLocation(expression),
+      this.context,
+      this.module,
+      this.builder,
+      this.checker
+    );
 
     let propertyIndex = 0;
     for (const property of expression.properties) {
@@ -314,6 +327,12 @@ class LLVMGenerator {
     }
 
     return object;
+  }
+
+  emitNewExpression(expression: ts.NewExpression): llvm.Value {
+    const typeName = (expression.expression as ts.Identifier).getText();
+    const type = this.symbolTable.get(typeName) as llvm.StructType;
+    return createGCAllocate(type as llvm.Type, this.context, this.module, this.builder, this.checker);
   }
 
   createLoadIfAlloca(value: llvm.Value): llvm.Value {

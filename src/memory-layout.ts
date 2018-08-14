@@ -1,9 +1,13 @@
+import * as llvm from "llvm-node";
 import * as ts from "typescript";
 import { getLLVMType } from "./types";
 
-export const bitsPerByte = 8;
-
-export function getSize(type: ts.Type, checker: ts.TypeChecker, context: llvm.LLVMContext): number {
-  const llvmType = getLLVMType(checker.typeToTypeNode(type)!, context, checker);
-  return llvmType.getPrimitiveSizeInBits() / bitsPerByte;
+export function getSize(
+  type: ts.Type | llvm.Type,
+  checker: ts.TypeChecker,
+  context: llvm.LLVMContext,
+  module: llvm.Module
+): number {
+  const llvmType = type instanceof llvm.Type ? type : getLLVMType(checker.typeToTypeNode(type)!, context, checker);
+  return module.dataLayout.getTypeStoreSize(llvmType);
 }

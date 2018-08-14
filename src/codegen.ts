@@ -68,6 +68,9 @@ class LLVMGenerator {
       case ts.SyntaxKind.FunctionDeclaration:
         this.emitFunctionDeclaration(node as ts.FunctionDeclaration, parentScope);
         break;
+      case ts.SyntaxKind.MethodDeclaration:
+        this.emitFunctionDeclaration(node as ts.MethodDeclaration, parentScope);
+        break;
       case ts.SyntaxKind.ClassDeclaration:
         this.emitClassDeclaration(node as ts.ClassDeclaration, parentScope);
         break;
@@ -97,7 +100,7 @@ class LLVMGenerator {
     }
   }
 
-  emitFunctionDeclaration(declaration: ts.FunctionDeclaration, parentScope: Scope): void {
+  emitFunctionDeclaration(declaration: ts.FunctionDeclaration | ts.MethodDeclaration, parentScope: Scope): void {
     const signature = this.checker.getSignatureFromDeclaration(declaration)!;
     const returnType = getLLVMType(this.checker.typeToTypeNode(signature.getReturnType())!, this.context, this.checker);
     const parameterTypes = declaration.parameters.map(parameter =>
@@ -129,7 +132,7 @@ class LLVMGenerator {
     }
 
     llvm.verifyFunction(func);
-    parentScope.set(declaration.name!.text, func);
+    parentScope.set(declaration.name!.getText(), func);
   }
 
   emitClassDeclaration(declaration: ts.ClassDeclaration, parentScope: Scope): void {
@@ -139,7 +142,12 @@ class LLVMGenerator {
       .filter(ts.isPropertyDeclaration)
       .map(member => getLLVMType((member as ts.PropertyDeclaration).type!, this.context, this.checker));
     type.setBody(members);
-    parentScope.set(name, type);
+
+    const scope = new Scope(name, type);
+    for (const method of declaration.members.filter(member => !ts.isPropertyDeclaration(member))) {
+      this.emitNode(method, scope);
+    }
+    parentScope.set(name, scope);
   }
 
   emitModuleDeclaration(declaration: ts.ModuleDeclaration, parentScope: Scope): void {
@@ -331,8 +339,8 @@ class LLVMGenerator {
 
   emitNewExpression(expression: ts.NewExpression): llvm.Value {
     const typeName = (expression.expression as ts.Identifier).getText();
-    const type = this.symbolTable.get(typeName) as llvm.StructType;
-    return createGCAllocate(type as llvm.Type, this.context, this.module, this.builder, this.checker);
+    const type = (this.symbolTable.get(typeName) as Scope).structType!;
+    return createGCAllocate(type, this.context, this.module, this.builder, this.checker);
   }
 
   createLoadIfAlloca(value: llvm.Value): llvm.Value {

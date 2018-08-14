@@ -6,10 +6,12 @@ type ScopeValue = llvm.Value | llvm.StructType | Scope;
 
 export class Scope extends Map<string, ScopeValue> {
   readonly name: string | undefined;
+  readonly structType: llvm.StructType | undefined;
 
-  constructor(name: string | undefined) {
+  constructor(name: string | undefined, structType?: llvm.StructType) {
     super();
     this.name = name;
+    this.structType = structType;
   }
 
   get(identifier: string): ScopeValue {

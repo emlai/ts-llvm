@@ -21,7 +21,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/emlai/ts-llvm.git"
+    "url": "git+https://github.com/ts-llvm/ts-llvm.git"
   },
   "keywords": [
     "TypeScript",
@@ -31,9 +31,9 @@
   "author": "",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/emlai/ts-llvm/issues"
+    "url": "https://github.com/ts-llvm/ts-llvm/issues"
   },
-  "homepage": "https://github.com/emlai/ts-llvm",
+  "homepage": "https://github.com/ts-llvm/ts-llvm",
   "dependencies": {
     "commander": "^2.15.1",
     "llvm-node": "^2.0.6",

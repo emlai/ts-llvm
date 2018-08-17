@@ -46,6 +46,30 @@ export function emitIfStatement(statement: ts.IfStatement, parentScope: Scope, g
   generator.builder.setInsertionPoint(endBlock);
 }
 
+export function emitWhileStatement(statement: ts.WhileStatement, generator: LLVMGenerator): void {
+  const condition = llvm.BasicBlock.create(generator.context, "while.cond", generator.currentFunction);
+  const body = llvm.BasicBlock.create(generator.context, "while.body");
+  const end = llvm.BasicBlock.create(generator.context, "while.end");
+
+  generator.builder.createBr(condition);
+  generator.builder.setInsertionPoint(condition);
+  const conditionValue = generator.emitExpression(statement.expression);
+  generator.builder.createCondBr(conditionValue, body, end);
+
+  generator.currentFunction.addBasicBlock(body);
+  generator.builder.setInsertionPoint(body);
+  generator.symbolTable.withScope(undefined, scope => {
+    generator.emitNode(statement.statement, scope);
+  });
+
+  if (!generator.builder.getInsertBlock().getTerminator()) {
+    generator.builder.createBr(condition);
+  }
+
+  generator.currentFunction.addBasicBlock(end);
+  generator.builder.setInsertionPoint(end);
+}
+
 export function emitReturnStatement(statement: ts.ReturnStatement, generator: LLVMGenerator): void {
   if (statement.expression) {
     generator.builder.createRet(

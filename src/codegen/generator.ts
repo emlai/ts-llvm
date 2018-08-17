@@ -21,7 +21,8 @@ import {
   emitExpressionStatement,
   emitIfStatement,
   emitReturnStatement,
-  emitVariableStatement
+  emitVariableStatement,
+  emitWhileStatement
 } from "./statement";
 
 export function emitLLVM(program: ts.Program): llvm.Module {
@@ -71,6 +72,7 @@ export class LLVMGenerator {
       case ts.SyntaxKind.Block:
       case ts.SyntaxKind.ExpressionStatement:
       case ts.SyntaxKind.IfStatement:
+      case ts.SyntaxKind.WhileStatement:
       case ts.SyntaxKind.ReturnStatement:
       case ts.SyntaxKind.VariableStatement:
         if (parentScope === this.symbolTable.globalScope) {
@@ -103,6 +105,9 @@ export class LLVMGenerator {
         break;
       case ts.SyntaxKind.IfStatement:
         emitIfStatement(node as ts.IfStatement, parentScope, this);
+        break;
+      case ts.SyntaxKind.WhileStatement:
+        emitWhileStatement(node as ts.WhileStatement, this);
         break;
       case ts.SyntaxKind.ReturnStatement:
         emitReturnStatement(node as ts.ReturnStatement, this);

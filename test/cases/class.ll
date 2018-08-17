@@ -1,25 +1,35 @@
 ; ModuleID = 'main'
 source_filename = "main"
 
-%A = type { double, double }
+%B = type { double }
+%A = type { %B*, double }
 %string = type { i8*, i32 }
 
 @0 = private unnamed_addr constant [4 x i8] c"foo\00"
 
 define i32 @main() {
 entry:
-  %x = alloca double
+  %x = alloca %B*
   %a = call %A* @A__constructor(double 4.000000e+00)
   %c = getelementptr inbounds %A, %A* %a, i32 0, i32 1
   store double 1.000000e+00, double* %c
   %b = getelementptr inbounds %A, %A* %a, i32 0, i32 0
-  %0 = load double, double* %b
-  store double %0, double* %x
+  %0 = load %B*, %B** %b
+  store %B* %0, %B** %x
   call void @A__a(%A* %a)
   ret i32 0
 }
 
 declare void @console__log(%string)
+
+define %B* @B__constructor() {
+entry:
+  %0 = call i8* @gc__allocate(i32 8)
+  %1 = bitcast i8* %0 to %B*
+  ret %B* %1
+}
+
+declare i8* @gc__allocate(i32)
 
 define %A* @A__constructor(double %b) {
 entry:
@@ -27,21 +37,22 @@ entry:
   %0 = call i8* @gc__allocate(i32 16)
   %1 = bitcast i8* %0 to %A*
   %b1 = getelementptr inbounds %A, %A* %1, i32 0, i32 0
-  store double %b, double* %b1
+  %2 = call %B* @B__constructor()
+  store %B* %2, %B** %b1
   %c = getelementptr inbounds %A, %A* %1, i32 0, i32 1
   store double 0.000000e+00, double* %c
   store double %b, double* %a
   ret %A* %1
 }
 
-declare i8* @gc__allocate(i32)
-
 define void @A__a(%A* %this) {
 entry:
   %b = getelementptr inbounds %A, %A* %this, i32 0, i32 0
+  %0 = load %B*, %B** %b
+  %b1 = getelementptr inbounds %B, %B* %0, i32 0, i32 0
   %c = getelementptr inbounds %A, %A* %this, i32 0, i32 1
-  %0 = load double, double* %c
-  store double %0, double* %b
+  %1 = load double, double* %c
+  store double %1, double* %b1
   call void @console__log(%string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @0, i32 0, i32 0), i32 3 })
   ret void
 }

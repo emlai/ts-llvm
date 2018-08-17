@@ -1,9 +1,8 @@
 import * as llvm from "llvm-node";
-import * as ts from "typescript";
+import { LLVMGenerator } from "./codegen/generator";
 import { error } from "./diagnostics";
 import { getSize } from "./memory-layout";
-import { getLLVMType } from "./types";
-import { createLLVMFunction } from "./utils";
+import { isValueType } from "./utils";
 
 export function getBuiltin(name: string, context: llvm.LLVMContext, module: llvm.Module) {
   switch (name) {
@@ -15,16 +14,12 @@ export function getBuiltin(name: string, context: llvm.LLVMContext, module: llvm
   }
 }
 
-export function createGCAllocate(
-  type: ts.Type | llvm.Type,
-  context: llvm.LLVMContext,
-  module: llvm.Module,
-  builder: llvm.IRBuilder,
-  checker: ts.TypeChecker
-) {
-  const size = getSize(type, checker, context, module);
-  const allocate = getBuiltin("gc__allocate", context, module);
-  const returnValue = builder.createCall(allocate, [llvm.ConstantInt.get(context, size, 32)]);
-  const llvmType = type instanceof llvm.Type ? type : getLLVMType(type, context, checker);
-  return builder.createBitCast(returnValue, llvmType.getPointerTo());
+export function createGCAllocate(type: llvm.Type, generator: LLVMGenerator) {
+  if (isValueType(type)) {
+    return error(`Allocating value types not supported, tried to allocate '${type}'`);
+  }
+  const size = getSize(type, generator);
+  const allocate = getBuiltin("gc__allocate", generator.context, generator.module);
+  const returnValue = generator.builder.createCall(allocate, [llvm.ConstantInt.get(generator.context, size, 32)]);
+  return generator.builder.createBitCast(returnValue, type.getPointerTo());
 }

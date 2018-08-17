@@ -1,15 +1,20 @@
-class A {
+class B {
   b: number;
+  constructor() {}
+}
+
+class A {
+  b: B;
   c: number;
 
   constructor(b: number) {
-    this.b = b;
+    this.b = new B();
     this.c = 0;
     let a = b;
   }
 
   a() {
-    this.b = this.c;
+    this.b.b = this.c;
     console.log("foo");
   }
 }

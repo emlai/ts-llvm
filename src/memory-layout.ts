@@ -1,13 +1,6 @@
 import * as llvm from "llvm-node";
-import * as ts from "typescript";
-import { getLLVMType } from "./types";
+import { LLVMGenerator } from "./codegen/generator";
 
-export function getSize(
-  type: ts.Type | llvm.Type,
-  checker: ts.TypeChecker,
-  context: llvm.LLVMContext,
-  module: llvm.Module
-): number {
-  const llvmType = type instanceof llvm.Type ? type : getLLVMType(type, context, checker);
-  return module.dataLayout.getTypeStoreSize(llvmType);
+export function getSize(type: llvm.Type, generator: LLVMGenerator): number {
+  return generator.module.dataLayout.getTypeStoreSize(type);
 }

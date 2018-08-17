@@ -22,11 +22,9 @@ export function emitFunctionDeclaration(
   }
   let thisValue: llvm.Value;
   const signature = generator.checker.getSignatureFromDeclaration(declaration)!;
-  const returnType = isConstructor
-    ? thisType!.getPointerTo()
-    : getLLVMType(signature.getReturnType(), generator.context, generator.checker);
+  const returnType = isConstructor ? thisType!.getPointerTo() : getLLVMType(signature.getReturnType(), generator);
   const parameterTypes = declaration.parameters.map(parameter =>
-    getLLVMType(generator.checker.getTypeFromTypeNode(parameter.type!), generator.context, generator.checker)
+    getLLVMType(generator.checker.getTypeFromTypeNode(parameter.type!), generator)
   );
   if (isMethod) {
     parameterTypes.unshift(thisType!.getPointerTo());
@@ -50,13 +48,7 @@ export function emitFunctionDeclaration(
       generator.builder.setInsertionPoint(entryBlock);
 
       if (isConstructor) {
-        thisValue = createGCAllocate(
-          thisType!,
-          generator.context,
-          generator.module,
-          generator.builder,
-          generator.checker
-        );
+        thisValue = createGCAllocate(thisType!, generator);
         bodyScope.set("this", thisValue);
       }
 
@@ -88,7 +80,7 @@ export function emitClassDeclaration(
   const type = llvm.StructType.create(generator.context, name);
   const members = declaration.members.filter(ts.isPropertyDeclaration).map(member => {
     const memberType = generator.checker.getTypeFromTypeNode((member as ts.PropertyDeclaration).type!);
-    return getLLVMType(memberType, generator.context, generator.checker);
+    return getLLVMType(memberType, generator);
   });
   type.setBody(members);
 

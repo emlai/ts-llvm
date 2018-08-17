@@ -3,7 +3,7 @@ import * as ts from "typescript";
 import { createGCAllocate } from "../builtins";
 import { error } from "../diagnostics";
 import { Scope } from "../symbol-table";
-import { getStringType } from "../types";
+import { getLLVMType, getStringType } from "../types";
 import { getMemberIndex } from "../utils";
 import { LLVMGenerator } from "./generator";
 
@@ -143,21 +143,29 @@ export function emitPropertyAccessExpression(
   const propertyName = expression.name.text;
 
   switch (left.kind) {
-    case ts.SyntaxKind.Identifier:
+    case ts.SyntaxKind.Identifier: {
       const value = generator.symbolTable.get((left as ts.Identifier).text);
       if (value instanceof Scope) {
         return value.get(propertyName) as llvm.Value;
       }
       return emitPropertyAccessGEP(propertyName, value, generator);
+    }
     case ts.SyntaxKind.ThisKeyword:
       return emitPropertyAccessGEP(propertyName, generator.symbolTable.get("this") as llvm.Value, generator);
+    case ts.SyntaxKind.PropertyAccessExpression: {
+      const value = emitPropertyAccessExpression(left as ts.PropertyAccessExpression, generator);
+      return emitPropertyAccessGEP(propertyName, generator.loadIfValueType(value), generator);
+    }
     default:
       return error(`Unhandled ts.LeftHandSideExpression '${ts.SyntaxKind[left.kind]}': ${left.getText()}`);
   }
 }
 
 export function emitPropertyAccessGEP(propertyName: string, value: llvm.Value, generator: LLVMGenerator): llvm.Value {
-  const typeName = ((value.type as llvm.PointerType).elementType as llvm.StructType).name;
+  if (!value.type.isPointerTy() || !value.type.elementType.isStructTy()) {
+    return error(`Property access left-hand-side must be a pointer to a struct, found '${value.type}'`);
+  }
+  const typeName = value.type.elementType.name;
   if (!typeName) {
     return error("Property access not implemented for anonymous object types");
   }
@@ -202,13 +210,8 @@ export function emitObjectLiteralExpression(
   expression: ts.ObjectLiteralExpression,
   generator: LLVMGenerator
 ): llvm.Value {
-  const object = createGCAllocate(
-    generator.checker.getTypeAtLocation(expression),
-    generator.context,
-    generator.module,
-    generator.builder,
-    generator.checker
-  );
+  const type = getLLVMType(generator.checker.getTypeAtLocation(expression), generator);
+  const object = createGCAllocate(type.isPointerTy() ? type.elementType : type, generator);
 
   let propertyIndex = 0;
   for (const property of expression.properties) {

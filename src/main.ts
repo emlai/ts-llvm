@@ -17,7 +17,12 @@ argv
   .option("--emitBitcode", "write LLVM bitcode to file")
   .parse(process.argv);
 
-main();
+try {
+  main();
+} catch (error) {
+  console.log(error);
+  process.exit(1);
+}
 
 function main() {
   const files = argv.args;

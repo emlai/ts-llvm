@@ -1,3 +1,15 @@
+; ModuleID = 'main'
+source_filename = "main"
+
+%string = type { i8*, i32 }
+
+define i32 @main() {
+entry:
+  ret i32 0
+}
+
+declare void @console__log(%string)
+
 define double @foo(double %a, double %b) {
 entry:
   %0 = fadd double %a, %b

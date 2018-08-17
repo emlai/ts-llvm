@@ -1,3 +1,6 @@
+; ModuleID = 'main'
+source_filename = "main"
+
 %A = type { double, double }
 %string = type { i8*, i32 }
 

@@ -1,3 +1,15 @@
+; ModuleID = 'main'
+source_filename = "main"
+
+%string = type { i8*, i32 }
+
+define i32 @main() {
+entry:
+  ret i32 0
+}
+
+declare void @console__log(%string)
+
 define i1 @foo(i1 %a, i1 %b, i1 %c) {
 entry:
   br i1 %a, label %then, label %else

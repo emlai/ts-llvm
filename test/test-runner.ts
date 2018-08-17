@@ -6,6 +6,7 @@ import * as path from "path";
 import { replaceExtension } from "../src/utils";
 const { green, red } = chalk;
 
+const updateSnapshots = process.argv.includes("--updateSnapshots");
 const tests = fs.readdirSync(path.join(__dirname, "cases")).filter(file => file.endsWith(".ts"));
 
 const failedTests = tests.filter(file => {
@@ -27,11 +28,14 @@ const failedTests = tests.filter(file => {
     error = err;
   }
 
-  if (!output || !expectedOutput || !output.includes(expectedOutput)) {
-    console.log(`TEST FAILED: ${file} (${testCommand.join(" ")})\n`);
+  if (!output || !expectedOutput || output !== expectedOutput) {
+    console.log(`TEST FAILED: ${file} (${testCommand.join(" ")})`);
 
     if (error) {
       console.log(error.toString());
+    } else if (updateSnapshots) {
+      fs.writeFileSync(outputFile, output);
+      console.log(`✓ Snapshot ${path.basename(outputFile)} updated.\n`);
     } else {
       const diffParts = diffLines(output.toString(), expectedOutput.toString());
 
@@ -51,6 +55,10 @@ const failedTests = tests.filter(file => {
 
   return undefined;
 });
+
+if (updateSnapshots) {
+  process.exit();
+}
 
 if (failedTests.length > 0) {
   process.exit(1);

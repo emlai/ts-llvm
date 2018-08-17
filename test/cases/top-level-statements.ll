@@ -1,3 +1,8 @@
+; ModuleID = 'main'
+source_filename = "main"
+
+%string = type { i8*, i32 }
+
 define i32 @main() {
 entry:
   %a = alloca double
@@ -7,4 +12,11 @@ entry:
   store double %1, double* %a
   call void @foo()
   ret i32 0
+}
+
+declare void @console__log(%string)
+
+define void @foo() {
+entry:
+  ret void
 }

@@ -6,6 +6,7 @@
     "build": "tsc",
     "start": "ts-node src/main.ts",
     "test": "ts-node test/test-runner.ts",
+    "updateSnapshots": "ts-node test/test-runner.ts --updateSnapshots",
     "lint": "tslint --project tsconfig.json \"{lib,src,test}/*.ts\"",
     "format": "npm run lint -- --fix",
     "precommit": "lint-staged"

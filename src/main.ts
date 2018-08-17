@@ -37,7 +37,7 @@ function main() {
   const llvmModule = emitLLVM(program);
 
   if (argv.printIR) {
-    console.log(llvmModule.print());
+    process.stdout.write(llvmModule.print());
   }
   if (argv.emitIR) {
     writeIRToFile(llvmModule, program);

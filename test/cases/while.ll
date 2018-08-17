@@ -1,3 +1,8 @@
+; ModuleID = 'main'
+source_filename = "main"
+
+%string = type { i8*, i32 }
+
 define i32 @main() {
 entry:
   br label %while.cond
@@ -12,4 +17,11 @@ while.body:                                       ; preds = %while.cond
 
 while.end:                                        ; preds = %while.cond
   ret i32 0
+}
+
+declare void @console__log(%string)
+
+define i1 @foo() {
+entry:
+  ret i1 false
 }

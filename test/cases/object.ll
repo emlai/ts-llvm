@@ -1,3 +1,15 @@
+; ModuleID = 'main'
+source_filename = "main"
+
+%string = type { i8*, i32 }
+
+define i32 @main() {
+entry:
+  ret i32 0
+}
+
+declare void @console__log(%string)
+
 define void @foo() {
 entry:
   %0 = call i8* @gc__allocate(i32 16)
@@ -8,3 +20,5 @@ entry:
   store double 2.000000e+00, double* %b
   ret void
 }
+
+declare i8* @gc__allocate(i32)

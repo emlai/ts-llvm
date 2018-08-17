@@ -1,3 +1,6 @@
+; ModuleID = 'main'
+source_filename = "main"
+
 %string = type { i8*, i32 }
 
 @0 = private unnamed_addr constant [4 x i8] c"foo\00"

@@ -6,7 +6,7 @@ import * as path from "path";
 // @ts-ignore
 import * as SegfaultHandler from "segfault-handler";
 import * as ts from "typescript";
-import { emitLLVM } from "./codegen";
+import { emitLLVM } from "./codegen/generator";
 import { replaceExtension } from "./utils";
 
 SegfaultHandler.registerHandler("ts-llvm-crash.log");

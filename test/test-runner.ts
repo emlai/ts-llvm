@@ -1,15 +1,20 @@
 import chalk from "chalk";
-import { spawnSync } from "child_process";
+import * as child_process from "child_process";
 import { diffLines } from "diff";
 import * as fs from "fs";
 import * as path from "path";
+import { promisify } from "util";
 import { replaceExtension } from "../src/utils";
 const { green, red } = chalk;
+const execFile = promisify(child_process.execFile);
+const readFile = promisify(fs.readFile);
+const writeFile = promisify(fs.writeFile);
+const unlink = promisify(fs.unlink);
 
 const updateSnapshots = process.argv.includes("--updateSnapshots");
 const tests = fs.readdirSync(path.join(__dirname, "cases")).filter(file => file.endsWith(".ts"));
 
-const failedTests = tests.filter(file => {
+async function runTest(file: string) {
   const compilerPath = path.join(__dirname, "..", "src", "main.ts");
   const inputFile = path.join(__dirname, "cases", file);
   const outputFile = path.join(__dirname, "cases", replaceExtension(file, ".ll"));
@@ -19,8 +24,8 @@ const failedTests = tests.filter(file => {
   let error;
 
   try {
-    expectedOutput = fs.readFileSync(outputFile).toString();
-    const { stdout, stderr } = spawnSync(testCommand[0], testCommand.slice(1));
+    expectedOutput = (await readFile(outputFile)).toString();
+    const { stdout, stderr } = await execFile(testCommand[0], testCommand.slice(1));
     output = stdout + stderr;
   } catch (err) {
     expectedOutput = expectedOutput || "";
@@ -34,7 +39,7 @@ const failedTests = tests.filter(file => {
     if (error) {
       console.log(error.toString());
     } else if (updateSnapshots) {
-      fs.writeFileSync(outputFile, output);
+      await writeFile(outputFile, output);
       console.log(`✓ Snapshot ${path.basename(outputFile)} updated.\n`);
     } else {
       const diffParts = diffLines(output.toString(), expectedOutput.toString());
@@ -48,20 +53,34 @@ const failedTests = tests.filter(file => {
   }
 
   const compileCommand = ["ts-node", compilerPath, inputFile];
-  spawnSync(compileCommand[0], compileCommand.slice(1));
-  const executable = replaceExtension(file, "");
-  spawnSync(executable);
-  fs.unlink(executable, () => undefined);
+  await execFile(compileCommand[0], compileCommand.slice(1));
+  const executable = path.join(__dirname, "..", replaceExtension(file, ""));
+  try {
+    await execFile(executable);
+  } finally {
+    await unlink(executable);
+  }
 
   return undefined;
-});
-
-if (updateSnapshots) {
-  process.exit();
 }
 
-if (failedTests.length > 0) {
-  process.exit(1);
+async function main() {
+  try {
+    const failedTests = (await Promise.all(tests.map(runTest))).filter(Boolean);
+
+    if (updateSnapshots) {
+      process.exit();
+    }
+
+    if (failedTests.length > 0) {
+      process.exit(1);
+    }
+
+    console.log(`All ${tests.length} tests passed.`);
+  } catch (error) {
+    console.log(error.toString());
+    process.exit(1);
+  }
 }
 
-console.log(`All ${tests.length} tests passed.`);
+main();

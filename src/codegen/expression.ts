@@ -14,6 +14,36 @@ export function emitBinaryExpression(expression: ts.BinaryExpression, generator:
   switch (expression.operatorToken.kind) {
     case ts.SyntaxKind.EqualsToken:
       return generator.builder.createStore(generator.createLoadIfAllocaOrPointerToValueType(right), left);
+    case ts.SyntaxKind.EqualsEqualsEqualsToken:
+      return generator.builder.createFCmpOEQ(
+        generator.createLoadIfAllocaOrPointerToValueType(left),
+        generator.createLoadIfAllocaOrPointerToValueType(right)
+      );
+    case ts.SyntaxKind.ExclamationEqualsEqualsToken:
+      return generator.builder.createFCmpONE(
+        generator.createLoadIfAllocaOrPointerToValueType(left),
+        generator.createLoadIfAllocaOrPointerToValueType(right)
+      );
+    case ts.SyntaxKind.LessThanToken:
+      return generator.builder.createFCmpOLT(
+        generator.createLoadIfAllocaOrPointerToValueType(left),
+        generator.createLoadIfAllocaOrPointerToValueType(right)
+      );
+    case ts.SyntaxKind.GreaterThanToken:
+      return generator.builder.createFCmpOGT(
+        generator.createLoadIfAllocaOrPointerToValueType(left),
+        generator.createLoadIfAllocaOrPointerToValueType(right)
+      );
+    case ts.SyntaxKind.LessThanEqualsToken:
+      return generator.builder.createFCmpOLE(
+        generator.createLoadIfAllocaOrPointerToValueType(left),
+        generator.createLoadIfAllocaOrPointerToValueType(right)
+      );
+    case ts.SyntaxKind.GreaterThanEqualsToken:
+      return generator.builder.createFCmpOGE(
+        generator.createLoadIfAllocaOrPointerToValueType(left),
+        generator.createLoadIfAllocaOrPointerToValueType(right)
+      );
     case ts.SyntaxKind.PlusToken:
       return generator.builder.createFAdd(
         generator.createLoadIfAllocaOrPointerToValueType(left),

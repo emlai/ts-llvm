@@ -8,6 +8,6 @@ export function getSize(
   context: llvm.LLVMContext,
   module: llvm.Module
 ): number {
-  const llvmType = type instanceof llvm.Type ? type : getLLVMType(checker.typeToTypeNode(type)!, context, checker);
+  const llvmType = type instanceof llvm.Type ? type : getLLVMType(type, context, checker);
   return module.dataLayout.getTypeStoreSize(llvmType);
 }

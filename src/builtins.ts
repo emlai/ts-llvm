@@ -25,6 +25,6 @@ export function createGCAllocate(
   const size = getSize(type, checker, context, module);
   const allocate = getBuiltin("gc__allocate", context, module);
   const returnValue = builder.createCall(allocate, [llvm.ConstantInt.get(context, size, 32)]);
-  const llvmType = type instanceof llvm.Type ? type : getLLVMType(checker.typeToTypeNode(type)!, context, checker);
+  const llvmType = type instanceof llvm.Type ? type : getLLVMType(type, context, checker);
   return builder.createBitCast(returnValue, llvmType.getPointerTo());
 }

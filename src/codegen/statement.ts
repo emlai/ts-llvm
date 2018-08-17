@@ -94,7 +94,7 @@ export function emitVariableStatement(
       }
       parentScope.set(name, initializer);
     } else {
-      const type = generator.checker.typeToTypeNode(generator.checker.getTypeAtLocation(declaration))!;
+      const type = generator.checker.getTypeAtLocation(declaration);
       const alloca = createEntryBlockAlloca(getLLVMType(type, generator.context, generator.checker), name, generator);
       generator.builder.createStore(initializer, alloca);
       parentScope.set(name, alloca);

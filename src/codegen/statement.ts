@@ -72,9 +72,7 @@ export function emitWhileStatement(statement: ts.WhileStatement, generator: LLVM
 
 export function emitReturnStatement(statement: ts.ReturnStatement, generator: LLVMGenerator): void {
   if (statement.expression) {
-    generator.builder.createRet(
-      generator.createLoadIfAllocaOrPointerToValueType(generator.emitExpression(statement.expression))
-    );
+    generator.builder.createRet(generator.loadIfValueType(generator.emitExpression(statement.expression)));
   } else {
     generator.builder.createRetVoid();
   }
@@ -88,9 +86,7 @@ export function emitVariableStatement(
   for (const declaration of statement.declarationList.declarations) {
     // TODO: Handle destructuring declarations.
     const name = declaration.name.getText();
-    const initializer = generator.createLoadIfAllocaOrPointerToValueType(
-      generator.emitExpression(declaration.initializer!)
-    );
+    const initializer = generator.loadIfValueType(generator.emitExpression(declaration.initializer!));
 
     if (isVarConst(declaration)) {
       if (!initializer.hasName()) {
@@ -111,4 +107,3 @@ function createEntryBlockAlloca(type: llvm.Type, name: string, generator: LLVMGe
   const arraySize = undefined;
   return builder.createAlloca(type, arraySize, name);
 }
-

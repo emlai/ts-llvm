@@ -13,10 +13,7 @@ function castToInt32AndBack(
   emit: (ints: llvm.Value[]) => llvm.Value
 ): llvm.Value {
   const ints = values.map(value => {
-    return generator.builder.createFPToSI(
-      generator.createLoadIfAllocaOrPointerToValueType(value),
-      llvm.Type.getInt32Ty(generator.context)
-    );
+    return generator.builder.createFPToSI(generator.loadIfValueType(value), llvm.Type.getInt32Ty(generator.context));
   });
   return generator.builder.createSIToFP(emit(ints), llvm.Type.getDoubleTy(generator.context));
 }
@@ -26,23 +23,17 @@ export function emitPrefixUnaryExpression(expression: ts.PrefixUnaryExpression, 
 
   switch (expression.operator) {
     case ts.SyntaxKind.PlusToken:
-      return generator.createLoadIfAllocaOrPointerToValueType(operand);
+      return generator.loadIfValueType(operand);
     case ts.SyntaxKind.MinusToken:
-      return generator.builder.createFNeg(generator.createLoadIfAllocaOrPointerToValueType(operand));
+      return generator.builder.createFNeg(generator.loadIfValueType(operand));
     case ts.SyntaxKind.PlusPlusToken:
       return generator.builder.createStore(
-        generator.builder.createFAdd(
-          generator.createLoadIfAllocaOrPointerToValueType(operand),
-          llvm.ConstantFP.get(generator.context, 1)
-        ),
+        generator.builder.createFAdd(generator.loadIfValueType(operand), llvm.ConstantFP.get(generator.context, 1)),
         operand
       );
     case ts.SyntaxKind.MinusMinusToken:
       return generator.builder.createStore(
-        generator.builder.createFSub(
-          generator.createLoadIfAllocaOrPointerToValueType(operand),
-          llvm.ConstantFP.get(generator.context, 1)
-        ),
+        generator.builder.createFSub(generator.loadIfValueType(operand), llvm.ConstantFP.get(generator.context, 1)),
         operand
       );
     case ts.SyntaxKind.TildeToken:
@@ -60,13 +51,13 @@ export function emitPostfixUnaryExpression(
 
   switch (expression.operator) {
     case ts.SyntaxKind.PlusPlusToken: {
-      const oldValue = generator.createLoadIfAllocaOrPointerToValueType(operand);
+      const oldValue = generator.loadIfValueType(operand);
       const newValue = generator.builder.createFAdd(oldValue, llvm.ConstantFP.get(generator.context, 1));
       generator.builder.createStore(newValue, operand);
       return oldValue;
     }
     case ts.SyntaxKind.MinusMinusToken: {
-      const oldValue = generator.createLoadIfAllocaOrPointerToValueType(operand);
+      const oldValue = generator.loadIfValueType(operand);
       const newValue = generator.builder.createFSub(oldValue, llvm.ConstantFP.get(generator.context, 1));
       generator.builder.createStore(newValue, operand);
       return oldValue;
@@ -80,62 +71,29 @@ export function emitBinaryExpression(expression: ts.BinaryExpression, generator:
 
   switch (expression.operatorToken.kind) {
     case ts.SyntaxKind.EqualsToken:
-      return generator.builder.createStore(generator.createLoadIfAllocaOrPointerToValueType(right), left);
+      return generator.builder.createStore(generator.loadIfValueType(right), left);
     case ts.SyntaxKind.EqualsEqualsEqualsToken:
-      return generator.builder.createFCmpOEQ(
-        generator.createLoadIfAllocaOrPointerToValueType(left),
-        generator.createLoadIfAllocaOrPointerToValueType(right)
-      );
+      return generator.builder.createFCmpOEQ(generator.loadIfValueType(left), generator.loadIfValueType(right));
     case ts.SyntaxKind.ExclamationEqualsEqualsToken:
-      return generator.builder.createFCmpONE(
-        generator.createLoadIfAllocaOrPointerToValueType(left),
-        generator.createLoadIfAllocaOrPointerToValueType(right)
-      );
+      return generator.builder.createFCmpONE(generator.loadIfValueType(left), generator.loadIfValueType(right));
     case ts.SyntaxKind.LessThanToken:
-      return generator.builder.createFCmpOLT(
-        generator.createLoadIfAllocaOrPointerToValueType(left),
-        generator.createLoadIfAllocaOrPointerToValueType(right)
-      );
+      return generator.builder.createFCmpOLT(generator.loadIfValueType(left), generator.loadIfValueType(right));
     case ts.SyntaxKind.GreaterThanToken:
-      return generator.builder.createFCmpOGT(
-        generator.createLoadIfAllocaOrPointerToValueType(left),
-        generator.createLoadIfAllocaOrPointerToValueType(right)
-      );
+      return generator.builder.createFCmpOGT(generator.loadIfValueType(left), generator.loadIfValueType(right));
     case ts.SyntaxKind.LessThanEqualsToken:
-      return generator.builder.createFCmpOLE(
-        generator.createLoadIfAllocaOrPointerToValueType(left),
-        generator.createLoadIfAllocaOrPointerToValueType(right)
-      );
+      return generator.builder.createFCmpOLE(generator.loadIfValueType(left), generator.loadIfValueType(right));
     case ts.SyntaxKind.GreaterThanEqualsToken:
-      return generator.builder.createFCmpOGE(
-        generator.createLoadIfAllocaOrPointerToValueType(left),
-        generator.createLoadIfAllocaOrPointerToValueType(right)
-      );
+      return generator.builder.createFCmpOGE(generator.loadIfValueType(left), generator.loadIfValueType(right));
     case ts.SyntaxKind.PlusToken:
-      return generator.builder.createFAdd(
-        generator.createLoadIfAllocaOrPointerToValueType(left),
-        generator.createLoadIfAllocaOrPointerToValueType(right)
-      );
+      return generator.builder.createFAdd(generator.loadIfValueType(left), generator.loadIfValueType(right));
     case ts.SyntaxKind.MinusToken:
-      return generator.builder.createFSub(
-        generator.createLoadIfAllocaOrPointerToValueType(left),
-        generator.createLoadIfAllocaOrPointerToValueType(right)
-      );
+      return generator.builder.createFSub(generator.loadIfValueType(left), generator.loadIfValueType(right));
     case ts.SyntaxKind.AsteriskToken:
-      return generator.builder.createFMul(
-        generator.createLoadIfAllocaOrPointerToValueType(left),
-        generator.createLoadIfAllocaOrPointerToValueType(right)
-      );
+      return generator.builder.createFMul(generator.loadIfValueType(left), generator.loadIfValueType(right));
     case ts.SyntaxKind.SlashToken:
-      return generator.builder.createFDiv(
-        generator.createLoadIfAllocaOrPointerToValueType(left),
-        generator.createLoadIfAllocaOrPointerToValueType(right)
-      );
+      return generator.builder.createFDiv(generator.loadIfValueType(left), generator.loadIfValueType(right));
     case ts.SyntaxKind.PercentToken:
-      return generator.builder.createFRem(
-        generator.createLoadIfAllocaOrPointerToValueType(left),
-        generator.createLoadIfAllocaOrPointerToValueType(right)
-      );
+      return generator.builder.createFRem(generator.loadIfValueType(left), generator.loadIfValueType(right));
     case ts.SyntaxKind.AmpersandToken:
       return castToInt32AndBack([left, right], generator, ([leftInt, rightInt]) =>
         generator.builder.createAnd(leftInt, rightInt)

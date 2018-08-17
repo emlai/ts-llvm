@@ -155,8 +155,8 @@ export class LLVMGenerator {
     }
   }
 
-  createLoadIfAllocaOrPointerToValueType(value: llvm.Value): llvm.Value {
-    if (value instanceof llvm.AllocaInst || (value.type.isPointerTy() && isValueType(value.type.elementType))) {
+  loadIfValueType(value: llvm.Value): llvm.Value {
+    if (value.type.isPointerTy() && isValueType(value.type.elementType)) {
       return this.builder.createLoad(value);
     }
     return value;

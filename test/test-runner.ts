@@ -37,7 +37,7 @@ async function runTest(file: string) {
     console.log(`TEST FAILED: ${file} (${testCommand.join(" ")})`);
 
     if (error) {
-      console.log(error.toString());
+      console.log(error.stdout || error.toString());
     } else if (updateSnapshots) {
       await writeFile(outputFile, output);
       console.log(`✓ Snapshot ${path.basename(outputFile)} updated.\n`);

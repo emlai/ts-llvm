@@ -7,6 +7,73 @@ import { getStringType } from "../types";
 import { getMemberIndex } from "../utils";
 import { LLVMGenerator } from "./generator";
 
+function castToInt32AndBack(
+  values: llvm.Value[],
+  generator: LLVMGenerator,
+  emit: (ints: llvm.Value[]) => llvm.Value
+): llvm.Value {
+  const ints = values.map(value => {
+    return generator.builder.createFPToSI(
+      generator.createLoadIfAllocaOrPointerToValueType(value),
+      llvm.Type.getInt32Ty(generator.context)
+    );
+  });
+  return generator.builder.createSIToFP(emit(ints), llvm.Type.getDoubleTy(generator.context));
+}
+
+export function emitPrefixUnaryExpression(expression: ts.PrefixUnaryExpression, generator: LLVMGenerator): llvm.Value {
+  const operand = generator.emitExpression(expression.operand);
+
+  switch (expression.operator) {
+    case ts.SyntaxKind.PlusToken:
+      return generator.createLoadIfAllocaOrPointerToValueType(operand);
+    case ts.SyntaxKind.MinusToken:
+      return generator.builder.createFNeg(generator.createLoadIfAllocaOrPointerToValueType(operand));
+    case ts.SyntaxKind.PlusPlusToken:
+      return generator.builder.createStore(
+        generator.builder.createFAdd(
+          generator.createLoadIfAllocaOrPointerToValueType(operand),
+          llvm.ConstantFP.get(generator.context, 1)
+        ),
+        operand
+      );
+    case ts.SyntaxKind.MinusMinusToken:
+      return generator.builder.createStore(
+        generator.builder.createFSub(
+          generator.createLoadIfAllocaOrPointerToValueType(operand),
+          llvm.ConstantFP.get(generator.context, 1)
+        ),
+        operand
+      );
+    case ts.SyntaxKind.TildeToken:
+      return castToInt32AndBack([operand], generator, ([value]) => generator.builder.createNot(value));
+    case ts.SyntaxKind.ExclamationToken:
+      return error(`Unhandled ts.PrefixUnaryOperator operator '${ts.SyntaxKind[expression.operator]}'`);
+  }
+}
+
+export function emitPostfixUnaryExpression(
+  expression: ts.PostfixUnaryExpression,
+  generator: LLVMGenerator
+): llvm.Value {
+  const operand = generator.emitExpression(expression.operand);
+
+  switch (expression.operator) {
+    case ts.SyntaxKind.PlusPlusToken: {
+      const oldValue = generator.createLoadIfAllocaOrPointerToValueType(operand);
+      const newValue = generator.builder.createFAdd(oldValue, llvm.ConstantFP.get(generator.context, 1));
+      generator.builder.createStore(newValue, operand);
+      return oldValue;
+    }
+    case ts.SyntaxKind.MinusMinusToken: {
+      const oldValue = generator.createLoadIfAllocaOrPointerToValueType(operand);
+      const newValue = generator.builder.createFSub(oldValue, llvm.ConstantFP.get(generator.context, 1));
+      generator.builder.createStore(newValue, operand);
+      return oldValue;
+    }
+  }
+}
+
 export function emitBinaryExpression(expression: ts.BinaryExpression, generator: LLVMGenerator): llvm.Value {
   const left = generator.emitExpression(expression.left);
   const right = generator.emitExpression(expression.right);
@@ -48,6 +115,50 @@ export function emitBinaryExpression(expression: ts.BinaryExpression, generator:
       return generator.builder.createFAdd(
         generator.createLoadIfAllocaOrPointerToValueType(left),
         generator.createLoadIfAllocaOrPointerToValueType(right)
+      );
+    case ts.SyntaxKind.MinusToken:
+      return generator.builder.createFSub(
+        generator.createLoadIfAllocaOrPointerToValueType(left),
+        generator.createLoadIfAllocaOrPointerToValueType(right)
+      );
+    case ts.SyntaxKind.AsteriskToken:
+      return generator.builder.createFMul(
+        generator.createLoadIfAllocaOrPointerToValueType(left),
+        generator.createLoadIfAllocaOrPointerToValueType(right)
+      );
+    case ts.SyntaxKind.SlashToken:
+      return generator.builder.createFDiv(
+        generator.createLoadIfAllocaOrPointerToValueType(left),
+        generator.createLoadIfAllocaOrPointerToValueType(right)
+      );
+    case ts.SyntaxKind.PercentToken:
+      return generator.builder.createFRem(
+        generator.createLoadIfAllocaOrPointerToValueType(left),
+        generator.createLoadIfAllocaOrPointerToValueType(right)
+      );
+    case ts.SyntaxKind.AmpersandToken:
+      return castToInt32AndBack([left, right], generator, ([leftInt, rightInt]) =>
+        generator.builder.createAnd(leftInt, rightInt)
+      );
+    case ts.SyntaxKind.BarToken:
+      return castToInt32AndBack([left, right], generator, ([leftInt, rightInt]) =>
+        generator.builder.createOr(leftInt, rightInt)
+      );
+    case ts.SyntaxKind.CaretToken:
+      return castToInt32AndBack([left, right], generator, ([leftInt, rightInt]) =>
+        generator.builder.createXor(leftInt, rightInt)
+      );
+    case ts.SyntaxKind.LessThanLessThanToken:
+      return castToInt32AndBack([left, right], generator, ([leftInt, rightInt]) =>
+        generator.builder.createShl(leftInt, rightInt)
+      );
+    case ts.SyntaxKind.GreaterThanGreaterThanToken:
+      return castToInt32AndBack([left, right], generator, ([leftInt, rightInt]) =>
+        generator.builder.createAShr(leftInt, rightInt)
+      );
+    case ts.SyntaxKind.GreaterThanGreaterThanGreaterThanToken:
+      return castToInt32AndBack([left, right], generator, ([leftInt, rightInt]) =>
+        generator.builder.createLShr(leftInt, rightInt)
       );
     default:
       return error(`Unhandled ts.BinaryExpression operator '${ts.SyntaxKind[expression.operatorToken.kind]}'`);

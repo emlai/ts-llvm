@@ -13,6 +13,8 @@ import {
   emitNewExpression,
   emitNumericLiteral,
   emitObjectLiteralExpression,
+  emitPostfixUnaryExpression,
+  emitPrefixUnaryExpression,
   emitPropertyAccessExpression,
   emitStringLiteral
 } from "./expression";
@@ -125,6 +127,10 @@ export class LLVMGenerator {
 
   emitExpression(expression: ts.Expression): llvm.Value {
     switch (expression.kind) {
+      case ts.SyntaxKind.PrefixUnaryExpression:
+        return emitPrefixUnaryExpression(expression as ts.PrefixUnaryExpression, this);
+      case ts.SyntaxKind.PostfixUnaryExpression:
+        return emitPostfixUnaryExpression(expression as ts.PostfixUnaryExpression, this);
       case ts.SyntaxKind.BinaryExpression:
         return emitBinaryExpression(expression as ts.BinaryExpression, this);
       case ts.SyntaxKind.CallExpression:

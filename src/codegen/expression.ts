@@ -232,7 +232,10 @@ export function emitObjectLiteralExpression(
 
 export function emitNewExpression(expression: ts.NewExpression, generator: LLVMGenerator): llvm.Value {
   const typeName = (expression.expression as ts.Identifier).getText();
-  const constructor = (generator.symbolTable.get(typeName) as Scope).get("constructor") as llvm.Value;
+  const constructor = (generator.symbolTable.get(typeName) as Scope).getOptional("constructor");
+  if (!constructor) {
+    return error("Calling 'new' requires the type to have a constructor");
+  }
   const args = expression.arguments!.map(argument => generator.emitExpression(argument));
-  return generator.builder.createCall(constructor, args);
+  return generator.builder.createCall(constructor as llvm.Value, args);
 }

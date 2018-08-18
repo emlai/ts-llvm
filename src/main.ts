@@ -20,7 +20,7 @@ argv
 try {
   main();
 } catch (error) {
-  console.log(error);
+  console.log(error.toString());
   process.exit(1);
 }
 
@@ -87,7 +87,9 @@ function writeExecutableToFile(module: llvm.Module, program: ts.Program): void {
 
   try {
     execSync(`llc ${optimizationLevel} -filetype=obj "${bitcodeFile}" -o "${objectFile}"`);
-    execSync(`cc ${optimizationLevel} "${objectFile}" ${runtimeLibFiles.join(" ")} -o "${executableFile}" -std=c++11`);
+    execSync(
+      `cc ${optimizationLevel} "${objectFile}" ${runtimeLibFiles.join(" ")} -o "${executableFile}" -std=c++11 -Werror`
+    );
   } finally {
     fs.unlinkSync(bitcodeFile);
     fs.unlinkSync(objectFile);

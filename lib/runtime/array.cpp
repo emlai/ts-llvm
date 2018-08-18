@@ -28,7 +28,7 @@ public:
       return &elements[index];
     }
 
-    printf("Array index %lu is out of bounds, array size is %lu.\n", index, size);
+    printf("Array index %lu is out of bounds, array size is %lu.\n", (unsigned long) index, (unsigned long) size);
     abort();
   }
 

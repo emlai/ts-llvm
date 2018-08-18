@@ -12,7 +12,7 @@
     "no-console": false,
     "no-implicit-dependencies": false,
     "no-shadowed-variable": [true, { "temporalDeadZone": false }],
-    "no-unused-variable": true,
+    "no-unused-variable": [true, "check-parameters"],
     "prefer-readonly": true,
     "prettier": true
   },

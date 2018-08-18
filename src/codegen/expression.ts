@@ -1,6 +1,6 @@
 import * as llvm from "llvm-node";
 import * as ts from "typescript";
-import { createGCAllocate } from "../builtins";
+import { createGCAllocate, getBuiltin } from "../builtins";
 import { error } from "../diagnostics";
 import { Scope } from "../symbol-table";
 import { getLLVMType, getStringType } from "../types";
@@ -204,6 +204,20 @@ export function emitStringLiteral(expression: ts.StringLiteral, generator: LLVMG
   const ptr = generator.builder.createGlobalStringPtr(expression.text) as llvm.Constant;
   const length = llvm.ConstantInt.get(generator.context, expression.text.length);
   return llvm.ConstantStruct.get(getStringType(generator.context), [ptr, length]);
+}
+
+export function emitArrayLiteralExpression(
+  expression: ts.ArrayLiteralExpression,
+  generator: LLVMGenerator
+): llvm.Value {
+  const constructor = getBuiltin("Array__number__constructor", generator.context, generator.module);
+  const push = getBuiltin("Array__number__push", generator.context, generator.module);
+  const array = generator.builder.createCall(constructor, []);
+  for (const element of expression.elements) {
+    const elementValue = generator.emitExpression(element);
+    generator.builder.createCall(push, [array, elementValue]);
+  }
+  return array;
 }
 
 export function emitObjectLiteralExpression(

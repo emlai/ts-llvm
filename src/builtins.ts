@@ -4,14 +4,25 @@ import { error } from "./diagnostics";
 import { getSize } from "./memory-layout";
 import { isValueType } from "./utils";
 
-export function getBuiltin(name: string, context: llvm.LLVMContext, module: llvm.Module) {
+type BuiltinName = "gc__allocate" | "Array__number__constructor" | "Array__number__push";
+
+function getBuiltinFunctionType(name: BuiltinName, context: llvm.LLVMContext) {
   switch (name) {
     case "gc__allocate":
-      const type = llvm.FunctionType.get(llvm.Type.getInt8PtrTy(context), [llvm.Type.getInt32Ty(context)], false);
-      return module.getOrInsertFunction(name, type);
-    default:
-      return error(`Unknown builtin ${name}`);
+      return llvm.FunctionType.get(llvm.Type.getInt8PtrTy(context), [llvm.Type.getInt32Ty(context)], false);
+    case "Array__number__constructor":
+      return llvm.FunctionType.get(llvm.Type.getInt8PtrTy(context), [], false);
+    case "Array__number__push":
+      return llvm.FunctionType.get(
+        llvm.Type.getVoidTy(context),
+        [llvm.Type.getInt8PtrTy(context), llvm.Type.getDoubleTy(context)],
+        false
+      );
   }
+}
+
+export function getBuiltin(name: BuiltinName, context: llvm.LLVMContext, module: llvm.Module) {
+  return module.getOrInsertFunction(name, getBuiltinFunctionType(name, context));
 }
 
 export function createGCAllocate(type: llvm.Type, generator: LLVMGenerator) {

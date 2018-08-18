@@ -6,6 +6,7 @@ import { Scope, SymbolTable } from "../symbol-table";
 import { createLLVMFunction, isValueType } from "../utils";
 import { emitClassDeclaration, emitFunctionDeclaration, emitModuleDeclaration } from "./declaration";
 import {
+  emitArrayLiteralExpression,
   emitBinaryExpression,
   emitBooleanLiteral,
   emitCallExpression,
@@ -146,6 +147,8 @@ export class LLVMGenerator {
         return emitNumericLiteral(expression as ts.NumericLiteral, this);
       case ts.SyntaxKind.StringLiteral:
         return emitStringLiteral(expression as ts.StringLiteral, this);
+      case ts.SyntaxKind.ArrayLiteralExpression:
+        return emitArrayLiteralExpression(expression as ts.ArrayLiteralExpression, this);
       case ts.SyntaxKind.ObjectLiteralExpression:
         return emitObjectLiteralExpression(expression as ts.ObjectLiteralExpression, this);
       case ts.SyntaxKind.NewExpression:

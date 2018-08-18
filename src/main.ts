@@ -87,7 +87,7 @@ function writeExecutableToFile(module: llvm.Module, program: ts.Program): void {
 
   try {
     execSync(`llc ${optimizationLevel} -filetype=obj "${bitcodeFile}" -o "${objectFile}"`);
-    execSync(`cc ${optimizationLevel} "${objectFile}" ${runtimeLibFiles.join(" ")} -o "${executableFile}"`);
+    execSync(`cc ${optimizationLevel} "${objectFile}" ${runtimeLibFiles.join(" ")} -o "${executableFile}" -std=c++11`);
   } finally {
     fs.unlinkSync(bitcodeFile);
     fs.unlinkSync(objectFile);

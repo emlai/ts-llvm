@@ -7,14 +7,19 @@
     "start": "ts-node src/main.ts",
     "test": "ts-node test/test-runner.ts",
     "updateSnapshots": "ts-node test/test-runner.ts --updateSnapshots",
-    "lint": "tslint --project tsconfig.json \"{lib,src,test}/**/*.ts\"",
+    "lint": "tslint --project tsconfig.json",
     "format": "npm run lint -- --fix",
     "precommit": "lint-staged"
   },
   "lint-staged": {
-    "{lib,src,test}/*.ts": [
-      "tslint --project tsconfig.json --fix",
-      "git add"
+    "linters": {
+      "{src,test}/**/*": [
+        "tslint --project tsconfig.json --fix",
+        "git add"
+      ]
+    },
+    "ignore": [
+      "test/cases/*"
     ]
   },
   "prettier": {

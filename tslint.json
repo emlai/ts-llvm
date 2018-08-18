@@ -10,6 +10,7 @@
     "member-access": [true, "no-public"],
     "no-console": false,
     "no-implicit-dependencies": false,
+    "no-shadowed-variable": [true, { "temporalDeadZone": false }],
     "prefer-readonly": true,
     "prettier": true
   },

@@ -11,6 +11,7 @@
     "no-console": false,
     "no-implicit-dependencies": false,
     "no-shadowed-variable": [true, { "temporalDeadZone": false }],
+    "no-unused-variable": true,
     "prefer-readonly": true,
     "prettier": true
   },

@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import * as argv from "commander";
 import * as fs from "fs";
 import * as llvm from "llvm-node";
@@ -78,18 +78,23 @@ function writeExecutableToFile(module: llvm.Module, program: ts.Program): void {
   const runtimeLibFiles = fs
     .readdirSync(runtimeLibPath)
     .filter(file => path.extname(file) === ".cpp")
-    .map(file => path.join(runtimeLibPath, file))
-    .map(file => `"${file}"`);
+    .map(file => path.join(runtimeLibPath, file));
   const bitcodeFile = writeBitcodeToFile(module, program);
   const objectFile = replaceExtension(bitcodeFile, ".o");
   const executableFile = replaceExtension(bitcodeFile, "");
   const optimizationLevel = "-O3";
 
   try {
-    execSync(`llc ${optimizationLevel} -filetype=obj "${bitcodeFile}" -o "${objectFile}"`);
-    execSync(
-      `cc ${optimizationLevel} "${objectFile}" ${runtimeLibFiles.join(" ")} -o "${executableFile}" -std=c++11 -Werror`
-    );
+    execFileSync("llc", [optimizationLevel, "-filetype=obj", bitcodeFile, "-o", objectFile]);
+    execFileSync("cc", [
+      optimizationLevel,
+      objectFile,
+      ...runtimeLibFiles,
+      "-o",
+      executableFile,
+      "-std=c++11",
+      "-Werror"
+    ]);
   } finally {
     fs.unlinkSync(bitcodeFile);
     fs.unlinkSync(objectFile);

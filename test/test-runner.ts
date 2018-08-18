@@ -78,7 +78,7 @@ async function main() {
 
     console.log(`All ${tests.length} tests passed.`);
   } catch (error) {
-    console.log(error.toString());
+    console.log(error.stdout || error.toString());
     process.exit(1);
   }
 }

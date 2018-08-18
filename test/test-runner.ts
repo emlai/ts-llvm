@@ -18,7 +18,7 @@ async function runTest(file: string) {
   const compilerPath = path.join(__dirname, "..", "src", "main.ts");
   const inputFile = path.join(__dirname, "cases", file);
   const outputFile = path.join(__dirname, "cases", replaceExtension(file, ".ll"));
-  const testCommand = ["ts-node", compilerPath, inputFile, "--printIR"];
+  const testCommand = ["ts-node", compilerPath, inputFile, "--printIR", "--target", "x86_64"];
   let expectedOutput;
   let output;
   let error;

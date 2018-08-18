@@ -28,7 +28,7 @@ export function getMemberIndex(name: string, declaration: ts.ClassDeclaration) {
 }
 
 export function isValueType(type: llvm.Type) {
-  return type.isDoubleTy() || type.isPointerTy();
+  return type.isDoubleTy() || type.isIntegerTy(1) || type.isPointerTy();
 }
 
 export function getTypeArguments(type: ts.Type) {

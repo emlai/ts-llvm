@@ -4,7 +4,7 @@ import { error } from "./diagnostics";
 import { getSize } from "./memory-layout";
 import { isValueType } from "./utils";
 
-type BuiltinName = "gc__allocate" | "Array__number__constructor" | "Array__number__push";
+type BuiltinName = "gc__allocate" | "Array__number__constructor" | "Array__number__push" | "Array__number__subscript";
 
 function getBuiltinFunctionType(name: BuiltinName, context: llvm.LLVMContext) {
   switch (name) {
@@ -15,6 +15,12 @@ function getBuiltinFunctionType(name: BuiltinName, context: llvm.LLVMContext) {
     case "Array__number__push":
       return llvm.FunctionType.get(
         llvm.Type.getVoidTy(context),
+        [llvm.Type.getInt8PtrTy(context), llvm.Type.getDoubleTy(context)],
+        false
+      );
+    case "Array__number__subscript":
+      return llvm.FunctionType.get(
+        llvm.Type.getDoubleTy(context),
         [llvm.Type.getInt8PtrTy(context), llvm.Type.getDoubleTy(context)],
         false
       );

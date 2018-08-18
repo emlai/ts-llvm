@@ -184,6 +184,16 @@ export function emitPropertyAccessExpression(
   }
 }
 
+export function emitElementAccessExpression(
+  expression: ts.ElementAccessExpression,
+  generator: LLVMGenerator
+): llvm.Value {
+  const subscript = getBuiltin("Array__number__subscript", generator.context, generator.module);
+  const array = generator.emitExpression(expression.expression);
+  const index = generator.emitExpression(expression.argumentExpression);
+  return generator.builder.createCall(subscript, [array, index]);
+}
+
 export function emitPropertyAccessGEP(propertyName: string, value: llvm.Value, generator: LLVMGenerator): llvm.Value {
   if (!value.type.isPointerTy() || !value.type.elementType.isStructTy()) {
     return error(`Property access left-hand-side must be a pointer to a struct, found '${value.type}'`);

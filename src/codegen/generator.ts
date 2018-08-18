@@ -10,6 +10,7 @@ import {
   emitBinaryExpression,
   emitBooleanLiteral,
   emitCallExpression,
+  emitElementAccessExpression,
   emitIdentifier,
   emitNewExpression,
   emitNumericLiteral,
@@ -138,6 +139,8 @@ export class LLVMGenerator {
         return emitCallExpression(expression as ts.CallExpression, this);
       case ts.SyntaxKind.PropertyAccessExpression:
         return emitPropertyAccessExpression(expression as ts.PropertyAccessExpression, this);
+      case ts.SyntaxKind.ElementAccessExpression:
+        return emitElementAccessExpression(expression as ts.ElementAccessExpression, this);
       case ts.SyntaxKind.Identifier:
         return emitIdentifier(expression as ts.Identifier, this);
       case ts.SyntaxKind.TrueKeyword:

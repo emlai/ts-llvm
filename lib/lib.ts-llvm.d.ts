@@ -2,6 +2,7 @@
 
 interface Array<T> {
   push(value: T): void;
+  [index: number]: T;
 }
 
 interface Boolean {}

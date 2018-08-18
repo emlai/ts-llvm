@@ -1,4 +1,6 @@
 #include <cstdint>
+#include <cstdlib>
+#include <iostream>
 #include <new>
 #include "gc.h"
 
@@ -18,6 +20,16 @@ public:
 
     elements[size] = value;
     size++;
+  }
+
+  // TODO: Return 'undefined' if index is out of bounds.
+  T operator[](uint32_t index) {
+    if (index < size) {
+      return elements[index];
+    }
+
+    printf("Array index %lu is out of bounds, array size is %lu.\n", index, size);
+    abort();
   }
 
 private:
@@ -42,6 +54,10 @@ Array<double>* Array__number__constructor() {
 
 void Array__number__push(Array<double>* array, double value) {
   array->push(value);
+}
+
+double Array__number__subscript(Array<double>* array, double index) {
+  return (*array)[static_cast<uint32_t>(index)];
 }
 
 }

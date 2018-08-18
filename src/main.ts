@@ -15,6 +15,7 @@ argv
   .option("--printIR", "print LLVM assembly to stdout")
   .option("--emitIR", "write LLVM assembly to file")
   .option("--emitBitcode", "write LLVM bitcode to file")
+  .option("--target [value]", "generate code for the given target")
   .parse(process.argv);
 
 try {
@@ -39,17 +40,34 @@ function main() {
     process.exit(1);
   }
 
+  llvm.initializeAllTargetInfos();
+  llvm.initializeAllTargets();
+  llvm.initializeAllTargetMCs();
+  llvm.initializeAllAsmParsers();
+  llvm.initializeAllAsmPrinters();
+
   const llvmModule = emitLLVM(program);
+
+  if (argv.target) {
+    const targetTriple = argv.target;
+    const target = llvm.TargetRegistry.lookupTarget(targetTriple);
+    const targetMachine = target.createTargetMachine(targetTriple, "generic");
+    llvmModule.dataLayout = targetMachine.createDataLayout();
+    llvmModule.targetTriple = targetTriple;
+  }
 
   if (argv.printIR) {
     process.stdout.write(llvmModule.print());
   }
+
   if (argv.emitIR) {
     writeIRToFile(llvmModule, program);
   }
+
   if (argv.emitBitcode) {
     writeBitcodeToFile(llvmModule, program);
   }
+
   if (!argv.printIR && !argv.emitIR && !argv.emitBitcode) {
     writeExecutableToFile(llvmModule, program);
   }

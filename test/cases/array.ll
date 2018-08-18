@@ -9,6 +9,7 @@ entry:
   call void @Array__number__push(i8* %a, double 1.000000e+00)
   call void @Array__number__push(i8* %a, double 2.000000e+00)
   call void @Array__number__push(i8* %a, double 3.000000e+00)
+  call void @Array__number__push(i8* %a, double 4.000000e+00)
   ret i32 0
 }
 

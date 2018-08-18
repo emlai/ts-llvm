@@ -1,6 +1,8 @@
 // tslint:disable:no-empty-interface no-namespace interface-name
 
-interface Array<T> {}
+interface Array<T> {
+  push(value: T): void;
+}
 
 interface Boolean {}
 

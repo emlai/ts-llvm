@@ -2,9 +2,10 @@ import * as llvm from "llvm-node";
 import * as ts from "typescript";
 import { createGCAllocate, getBuiltin } from "../builtins";
 import { error } from "../diagnostics";
+import { mangleFunctionDeclaration } from "../mangle";
 import { Scope } from "../symbol-table";
 import { getLLVMType, getStringType } from "../types";
-import { getMemberIndex } from "../utils";
+import { getMemberIndex, getTypeArguments, isMethodReference } from "../utils";
 import { LLVMGenerator } from "./generator";
 
 function castToInt32AndBack(
@@ -124,14 +125,36 @@ export function emitBinaryExpression(expression: ts.BinaryExpression, generator:
 }
 
 export function emitCallExpression(expression: ts.CallExpression, generator: LLVMGenerator): llvm.Value {
-  const callee = generator.emitExpression(expression.expression);
+  const isMethod = isMethodReference(expression.expression, generator.checker);
+  let callee: llvm.Value;
+
+  if (isMethod) {
+    const methodReference = expression.expression as ts.PropertyAccessExpression;
+    const thisType = generator.checker.getTypeAtLocation(methodReference.expression);
+    const property = generator.checker.getPropertyOfType(thisType, methodReference.name.text);
+    const declaration = property!.valueDeclaration;
+
+    if (!ts.isMethodSignature(declaration) && !ts.isMethodDeclaration(declaration)) {
+      return error(`Cannot call non-method property '${ts.SyntaxKind[declaration.kind]}'`);
+    }
+
+    const mangledName = mangleFunctionDeclaration(declaration, getTypeArguments(thisType), generator.checker);
+    callee = generator.module.getFunction(mangledName);
+
+    if (!callee) {
+      return error(`Function '${mangledName}' not found in module`);
+    }
+  } else {
+    callee = generator.emitExpression(expression.expression);
+  }
+
   const args = expression.arguments.map(argument => generator.emitExpression(argument));
-  const isMethod =
-    callee instanceof llvm.Function && callee.getArguments().length > 0 && callee.getArguments()[0].name === "this";
+
   if (isMethod) {
     const propertyAccess = expression.expression as ts.PropertyAccessExpression;
     args.unshift(generator.emitExpression(propertyAccess.expression));
   }
+
   return generator.builder.createCall(callee, args);
 }
 
@@ -171,11 +194,6 @@ export function emitPropertyAccessGEP(propertyName: string, value: llvm.Value, g
   }
   const typeScope = generator.symbolTable.get(typeName) as Scope;
   const type = typeScope.data!.declaration;
-
-  const method = type.members.find(member => ts.isMethodDeclaration(member) && member.name.getText() === propertyName);
-  if (method) {
-    return typeScope.get(propertyName) as llvm.Value;
-  }
 
   const indexList = [
     llvm.ConstantInt.get(generator.context, 0),

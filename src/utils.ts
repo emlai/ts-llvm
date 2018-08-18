@@ -30,3 +30,19 @@ export function getMemberIndex(name: string, declaration: ts.ClassDeclaration) {
 export function isValueType(type: llvm.Type) {
   return type.isDoubleTy() || type.isPointerTy();
 }
+
+export function getTypeArguments(type: ts.Type) {
+  if (type.flags & ts.TypeFlags.Object) {
+    if ((type as ts.ObjectType).objectFlags & ts.ObjectFlags.Reference) {
+      return (type as ts.TypeReference).typeArguments || [];
+    }
+  }
+  return [];
+}
+
+export function isMethodReference(expression: ts.Expression, checker: ts.TypeChecker): boolean {
+  return (
+    ts.isPropertyAccessExpression(expression) &&
+    (checker.getTypeAtLocation(expression).symbol.flags & ts.SymbolFlags.Method) !== 0
+  );
+}

@@ -29,7 +29,7 @@ export function emitFunctionDeclaration(
   if (isMethod) {
     parameterTypes.unshift(thisType!.getPointerTo());
   }
-  const qualifiedName = mangleFunctionDeclaration(declaration, parentScope);
+  const qualifiedName = mangleFunctionDeclaration(declaration, [], generator.checker);
   const func = createLLVMFunction(returnType, parameterTypes, qualifiedName, generator.module);
   const body = declaration.body;
 

@@ -190,7 +190,7 @@ export function emitElementAccessExpression(
 ): llvm.Value {
   const subscript = getBuiltin("Array__number__subscript", generator.context, generator.module);
   const array = generator.emitExpression(expression.expression);
-  const index = generator.emitExpression(expression.argumentExpression);
+  const index = generator.loadIfValueType(generator.emitExpression(expression.argumentExpression));
   return generator.builder.createCall(subscript, [array, index]);
 }
 

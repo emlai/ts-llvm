@@ -20,7 +20,7 @@ function getBuiltinFunctionType(name: BuiltinName, context: llvm.LLVMContext) {
       );
     case "Array__number__subscript":
       return llvm.FunctionType.get(
-        llvm.Type.getDoubleTy(context),
+        llvm.Type.getDoubleTy(context).getPointerTo(),
         [llvm.Type.getInt8PtrTy(context), llvm.Type.getDoubleTy(context)],
         false
       );

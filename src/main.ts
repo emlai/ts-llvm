@@ -21,7 +21,7 @@ argv
 try {
   main();
 } catch (error) {
-  console.log(error.toString());
+  console.log(error.stack);
   process.exit(1);
 }
 

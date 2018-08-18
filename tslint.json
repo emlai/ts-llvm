@@ -8,6 +8,7 @@
     "interface-name": [true, "never-prefix"],
     "max-classes-per-file": false,
     "member-access": [true, "no-public"],
+    "no-bitwise": false,
     "no-console": false,
     "no-implicit-dependencies": false,
     "no-shadowed-variable": [true, { "temporalDeadZone": false }],

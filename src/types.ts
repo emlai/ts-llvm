@@ -5,7 +5,6 @@ import { error } from "./diagnostics";
 
 export function getLLVMType(type: ts.Type, generator: LLVMGenerator): llvm.Type {
   const { context, checker } = generator;
-  // tslint:disable:no-bitwise
 
   if (type.flags & ts.TypeFlags.Boolean) {
     return llvm.Type.getInt1Ty(context);
@@ -31,7 +30,6 @@ export function getLLVMType(type: ts.Type, generator: LLVMGenerator): llvm.Type 
     return error("'any' type is not supported");
   }
 
-  // tslint:enable:no-bitwise
   return error(`Unhandled ts.Type '${checker.typeToString(type)}'`);
 }
 

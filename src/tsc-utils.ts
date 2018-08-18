@@ -1,5 +1,3 @@
-// tslint:disable:no-bitwise
-
 import * as ts from "typescript";
 
 // Internal utility functions from https://github.com/Microsoft/TypeScript/blob/master/src/compiler/utilities.ts

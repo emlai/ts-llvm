@@ -1,5 +1,3 @@
-// tslint:disable:no-bitwise
-
 function foo(a: number, b: number) {
   let aa = +a;
 

@@ -46,3 +46,7 @@ export function isMethodReference(expression: ts.Expression, checker: ts.TypeChe
     (checker.getTypeAtLocation(expression).symbol.flags & ts.SymbolFlags.Method) !== 0
   );
 }
+
+export function isArray(type: ts.Type) {
+  return type.symbol.name === "Array";
+}

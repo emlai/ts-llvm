@@ -5,7 +5,7 @@ import { error } from "../diagnostics";
 import { mangleFunctionDeclaration } from "../mangle";
 import { Scope } from "../symbol-table";
 import { getLLVMType, getStringType } from "../types";
-import { getMemberIndex, getTypeArguments, isMethodReference } from "../utils";
+import { getMemberIndex, getTypeArguments, isArray, isMethodReference } from "../utils";
 import { LLVMGenerator } from "./generator";
 
 function castToInt32AndBack(
@@ -165,6 +165,10 @@ export function emitPropertyAccessExpression(
   const left = expression.expression;
   const propertyName = expression.name.text;
 
+  if (propertyName === "length" && isArray(generator.checker.getTypeAtLocation(left))) {
+    return emitArrayLengthAccess(left, generator);
+  }
+
   switch (left.kind) {
     case ts.SyntaxKind.Identifier: {
       const value = generator.symbolTable.get((left as ts.Identifier).text);
@@ -192,6 +196,12 @@ export function emitElementAccessExpression(
   const array = generator.emitExpression(expression.expression);
   const index = generator.loadIfValueType(generator.emitExpression(expression.argumentExpression));
   return generator.builder.createCall(subscript, [array, index]);
+}
+
+export function emitArrayLengthAccess(expression: ts.Expression, generator: LLVMGenerator) {
+  const lengthGetter = getBuiltin("Array__number__length", generator.context, generator.module);
+  const array = generator.emitExpression(expression);
+  return generator.builder.createCall(lengthGetter, [array]);
 }
 
 export function emitPropertyAccessGEP(propertyName: string, value: llvm.Value, generator: LLVMGenerator): llvm.Value {

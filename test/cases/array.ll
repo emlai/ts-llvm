@@ -5,6 +5,7 @@ source_filename = "main"
 
 define i32 @main() {
 entry:
+  %c = alloca double
   %b = alloca double
   %a = call i8* @Array__number__constructor()
   call void @Array__number__push(i8* %a, double 1.000000e+00)
@@ -21,6 +22,8 @@ entry:
   %6 = call double* @Array__number__subscript(i8* %a, double %5)
   %7 = load double, double* %6
   store double %7, double* %2
+  %8 = call double @Array__number__length(i8* %a)
+  store double %8, double* %c
   ret i32 0
 }
 
@@ -31,3 +34,5 @@ declare i8* @Array__number__constructor()
 declare void @Array__number__push(i8*, double)
 
 declare double* @Array__number__subscript(i8*, double)
+
+declare double @Array__number__length(i8*)

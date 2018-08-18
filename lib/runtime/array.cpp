@@ -13,6 +13,10 @@ class Array {
 public:
   Array() : elements(nullptr), size(0), capacity(0) {}
 
+  uint32_t length() const {
+    return size;
+  }
+
   void push(T value) {
     if (size == capacity) {
       expand();
@@ -58,6 +62,10 @@ void Array__number__push(Array<double>* array, double value) {
 
 double* Array__number__subscript(Array<double>* array, double index) {
   return (*array)[static_cast<uint32_t>(index)];
+}
+
+double Array__number__length(Array<double>* array) {
+  return static_cast<double>(array->length());
 }
 
 }

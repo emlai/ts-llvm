@@ -4,7 +4,7 @@ import * as ts from "typescript";
 import { createGCAllocate } from "../builtins";
 import { mangleFunctionDeclaration } from "../mangle";
 import { Scope } from "../symbol-table";
-import { getLLVMType } from "../types";
+import { getLLVMType, getStructType } from "../types";
 import { createLLVMFunction } from "../utils";
 import { LLVMGenerator } from "./generator";
 
@@ -77,13 +77,7 @@ export function emitClassDeclaration(
   generator: LLVMGenerator
 ): void {
   const name = declaration.name!.text;
-  const type = llvm.StructType.create(generator.context, name);
-  const members = declaration.members.filter(ts.isPropertyDeclaration).map(member => {
-    const memberType = generator.checker.getTypeFromTypeNode((member as ts.PropertyDeclaration).type!);
-    return getLLVMType(memberType, generator);
-  });
-  type.setBody(members);
-
+  const type = getStructType(generator.checker.getTypeAtLocation(declaration), generator);
   const scope = new Scope(name, { declaration, type });
   parentScope.set(name, scope);
   for (const method of declaration.members.filter(member => !ts.isPropertyDeclaration(member))) {

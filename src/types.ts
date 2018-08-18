@@ -4,7 +4,7 @@ import { LLVMGenerator } from "./codegen/generator";
 import { error } from "./diagnostics";
 
 export function getLLVMType(type: ts.Type, generator: LLVMGenerator): llvm.Type {
-  const { context, module, checker } = generator;
+  const { context, checker } = generator;
   // tslint:disable:no-bitwise
 
   if (type.flags & ts.TypeFlags.Boolean) {
@@ -20,33 +20,7 @@ export function getLLVMType(type: ts.Type, generator: LLVMGenerator): llvm.Type 
   }
 
   if (type.flags & ts.TypeFlags.Object) {
-    const elements = checker.getPropertiesOfType(type).map(property => {
-      const propertyDeclaration = property.declarations[0];
-      switch (propertyDeclaration.kind) {
-        case ts.SyntaxKind.PropertyAssignment:
-          return getLLVMType(checker.getTypeAtLocation(propertyDeclaration as ts.PropertyAssignment), generator);
-        case ts.SyntaxKind.PropertyDeclaration:
-          return getLLVMType(checker.getTypeAtLocation(propertyDeclaration as ts.PropertyDeclaration), generator);
-        default:
-          return error(`Unhandled ts.Declaration '${ts.SyntaxKind[propertyDeclaration.kind]}'`);
-      }
-    });
-
-    const declaration = type.symbol.declarations[0];
-    let struct: llvm.StructType | null;
-
-    if (ts.isClassDeclaration(declaration)) {
-      const name = declaration.name!.text;
-      struct = module.getTypeByName(name);
-      if (!struct) {
-        struct = llvm.StructType.create(context, name);
-        struct.setBody(elements);
-      }
-    } else {
-      struct = llvm.StructType.get(context, elements);
-    }
-
-    return struct.getPointerTo();
+    return getStructType(type, generator).getPointerTo();
   }
 
   if (type.flags & ts.TypeFlags.Void) {
@@ -59,6 +33,32 @@ export function getLLVMType(type: ts.Type, generator: LLVMGenerator): llvm.Type 
 
   // tslint:enable:no-bitwise
   return error(`Unhandled ts.Type '${checker.typeToString(type)}'`);
+}
+
+export function getStructType(type: ts.Type, generator: LLVMGenerator) {
+  const { context, module, checker } = generator;
+
+  const elements = checker
+    .getPropertiesOfType(type)
+    .map(property => property.declarations[0])
+    .filter(declaration => ts.isPropertyAssignment(declaration) || ts.isPropertyDeclaration(declaration))
+    .map(declaration => getLLVMType(checker.getTypeAtLocation(declaration), generator));
+
+  const declaration = type.symbol.declarations[0];
+  let struct: llvm.StructType | null;
+
+  if (ts.isClassDeclaration(declaration)) {
+    const name = declaration.name!.text;
+    struct = module.getTypeByName(name);
+    if (!struct) {
+      struct = llvm.StructType.create(context, name);
+      struct.setBody(elements);
+    }
+  } else {
+    struct = llvm.StructType.get(context, elements);
+  }
+
+  return struct;
 }
 
 let stringType: llvm.StructType | undefined;

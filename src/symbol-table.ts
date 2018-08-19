@@ -31,6 +31,14 @@ export class Scope extends Map<string, ScopeValue> {
   getOptional(identifier: string): ScopeValue | undefined {
     return super.get(identifier);
   }
+
+  set(identifier: string, value: ScopeValue) {
+    if (!this.getOptional(identifier)) {
+      return super.set(identifier, value);
+    }
+
+    return error(`Overwriting identifier '${identifier}' in symbol table`);
+  }
 }
 
 export class SymbolTable {

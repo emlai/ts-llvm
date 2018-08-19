@@ -1,6 +1,7 @@
 // tslint:disable:no-empty-interface no-namespace interface-name
 
-interface Array<T> {
+declare class Array<T> {
+  constructor();
   readonly length: number;
   push(value: T): void;
   [index: number]: T;

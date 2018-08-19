@@ -3,8 +3,6 @@ source_filename = "main"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64"
 
-%string = type { i8*, i32 }
-
 define i32 @main() {
 entry:
   br label %while.cond
@@ -20,8 +18,6 @@ while.body:                                       ; preds = %while.cond
 while.end:                                        ; preds = %while.cond
   ret i32 0
 }
-
-declare void @console__log(%string)
 
 define i1 @foo() {
 entry:

@@ -2,41 +2,93 @@ import * as llvm from "llvm-node";
 import * as R from "ramda";
 import * as ts from "typescript";
 import { createGCAllocate } from "../builtins";
-import { mangleFunctionDeclaration } from "../mangle";
+import { error } from "../diagnostics";
+import { getDeclarationBaseName, mangleFunctionDeclaration, mangleType } from "../mangle";
 import { Scope } from "../symbol-table";
 import { getLLVMType, getStructType } from "../types";
-import { createLLVMFunction } from "../utils";
+import { addTypeArguments, createLLVMFunction } from "../utils";
 import { LLVMGenerator } from "./generator";
 
+type FunctionLikeDeclaration =
+  | ts.FunctionDeclaration
+  | ts.MethodDeclaration
+  | ts.IndexSignatureDeclaration
+  | ts.PropertyDeclaration
+  | ts.ConstructorDeclaration;
+
+function getFunctionDeclarationScope(declaration: FunctionLikeDeclaration, generator: LLVMGenerator) {
+  const { parent } = declaration;
+
+  if (ts.isSourceFile(parent)) {
+    return generator.symbolTable.globalScope;
+  } else if (ts.isModuleBlock(parent)) {
+    return generator.symbolTable.get(parent.parent.name.text) as Scope;
+  } else if (ts.isClassDeclaration(parent) || ts.isInterfaceDeclaration(parent)) {
+    return generator.symbolTable.get(parent.name!.text) as Scope;
+  } else {
+    return error(`Unhandled function declaration parent kind '${ts.SyntaxKind[parent.kind]}'`);
+  }
+}
+
 export function emitFunctionDeclaration(
-  declaration: ts.FunctionDeclaration | ts.MethodDeclaration | ts.ConstructorDeclaration,
-  parentScope: Scope,
+  declaration: FunctionLikeDeclaration,
+  tsThisType: ts.Type | undefined,
+  argumentTypes: ts.Type[],
   generator: LLVMGenerator
-): void {
+): llvm.Function | undefined {
+  const preExisting = generator.module.getFunction(
+    mangleFunctionDeclaration(declaration, tsThisType, generator.checker)
+  );
+  if (preExisting) {
+    return preExisting;
+  }
+
+  const parentScope = getFunctionDeclarationScope(declaration, generator);
   const isConstructor = ts.isConstructorDeclaration(declaration);
-  const isMethod = ts.isMethodDeclaration(declaration);
+  const hasThisParameter =
+    ts.isMethodDeclaration(declaration) ||
+    ts.isIndexSignatureDeclaration(declaration) ||
+    ts.isPropertyDeclaration(declaration);
+
   let thisType: llvm.StructType | undefined;
-  if (isConstructor || isMethod) {
-    const parent = (declaration as ts.ConstructorDeclaration | ts.MethodDeclaration).parent as ts.ClassLikeDeclaration;
+  if (isConstructor || hasThisParameter) {
+    const parent = (declaration as ts.ConstructorDeclaration | ts.MethodDeclaration).parent as ts.ClassDeclaration;
     thisType = (generator.symbolTable.get(parent.name!.text) as Scope).data!.type;
   }
   let thisValue: llvm.Value;
-  const signature = generator.checker.getSignatureFromDeclaration(declaration)!;
-  const returnType = isConstructor ? thisType!.getPointerTo() : getLLVMType(signature.getReturnType(), generator);
-  const parameterTypes = declaration.parameters.map(parameter =>
-    getLLVMType(generator.checker.getTypeFromTypeNode(parameter.type!), generator)
-  );
-  if (isMethod) {
+
+  let tsReturnType: ts.Type;
+  if (ts.isIndexSignatureDeclaration(declaration) && tsThisType) {
+    tsReturnType = generator.checker.getIndexTypeOfType(tsThisType, ts.IndexKind.Number)!;
+  } else {
+    if (ts.isPropertyDeclaration(declaration)) {
+      tsReturnType = generator.checker.getTypeFromTypeNode(declaration.type!);
+    } else {
+      const signature = generator.checker.getSignatureFromDeclaration(declaration)!;
+      tsReturnType = signature.getReturnType();
+    }
+  }
+
+  let returnType = isConstructor ? thisType!.getPointerTo() : getLLVMType(tsReturnType, generator);
+  if (ts.isIndexSignatureDeclaration(declaration)) {
+    returnType = returnType.getPointerTo();
+  }
+  const parameterTypes = argumentTypes.map(argumentType => getLLVMType(argumentType, generator));
+  if (hasThisParameter) {
     parameterTypes.unshift(thisType!.getPointerTo());
   }
-  const qualifiedName = mangleFunctionDeclaration(declaration, [], generator.checker);
+  const qualifiedName = mangleFunctionDeclaration(declaration, tsThisType, generator.checker);
   const func = createLLVMFunction(returnType, parameterTypes, qualifiedName, generator.module);
-  const body = declaration.body;
+  const body =
+    ts.isIndexSignatureDeclaration(declaration) || ts.isPropertyDeclaration(declaration) ? undefined : declaration.body;
 
   if (body) {
     generator.symbolTable.withScope(qualifiedName, bodyScope => {
-      const parameterNames = signature.parameters.map(parameter => parameter.name);
-      if (isMethod) {
+      const parameterNames = ts.isPropertyDeclaration(declaration)
+        ? []
+        : generator.checker.getSignatureFromDeclaration(declaration)!.parameters.map(parameter => parameter.name);
+
+      if (hasThisParameter) {
         parameterNames.unshift("this");
       }
       for (const [parameterName, argument] of R.zip(parameterNames, func.getArguments())) {
@@ -67,17 +119,31 @@ export function emitFunctionDeclaration(
   }
 
   llvm.verifyFunction(func);
-  const name = isConstructor ? "constructor" : declaration.name!.getText();
+  const name = getDeclarationBaseName(declaration);
   parentScope.set(name, func);
+  return func;
 }
 
 export function emitClassDeclaration(
   declaration: ts.ClassDeclaration,
+  typeArguments: ReadonlyArray<ts.Type>,
   parentScope: Scope,
   generator: LLVMGenerator
 ): void {
+  if (declaration.typeParameters && typeArguments.length === 0) {
+    return;
+  }
+
+  const thisType = addTypeArguments(generator.checker.getTypeAtLocation(declaration), typeArguments);
+
+  const preExisting = generator.module.getTypeByName(mangleType(thisType, generator.checker));
+  if (preExisting) {
+    return;
+  }
+
+  const isOpaque = !!(ts.getCombinedModifierFlags(declaration) & ts.ModifierFlags.Ambient);
   const name = declaration.name!.text;
-  const type = getStructType(generator.checker.getTypeAtLocation(declaration), generator);
+  const type = getStructType(thisType, isOpaque, generator);
   const scope = new Scope(name, { declaration, type });
   parentScope.set(name, scope);
   for (const method of declaration.members.filter(member => !ts.isPropertyDeclaration(member))) {

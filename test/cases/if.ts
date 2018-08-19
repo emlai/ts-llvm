@@ -10,3 +10,5 @@ function foo(a: boolean, b: boolean, c: boolean) {
   }
   return c;
 }
+
+foo(false, true, false);

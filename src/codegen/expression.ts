@@ -1,11 +1,12 @@
 import * as llvm from "llvm-node";
 import * as ts from "typescript";
-import { createGCAllocate, getBuiltin } from "../builtins";
+import { createGCAllocate } from "../builtins";
 import { error } from "../diagnostics";
-import { mangleFunctionDeclaration } from "../mangle";
+import { getDeclarationBaseName } from "../mangle";
 import { Scope } from "../symbol-table";
 import { getLLVMType, getStringType } from "../types";
-import { getMemberIndex, getTypeArguments, isArray, isMethodReference } from "../utils";
+import { getMemberIndex, getMethod, getTypeArguments, isArray, isMethodReference, keepInsertionPoint } from "../utils";
+import { emitFunctionDeclaration } from "./declaration";
 import { LLVMGenerator } from "./generator";
 
 function castToInt32AndBack(
@@ -124,29 +125,40 @@ export function emitBinaryExpression(expression: ts.BinaryExpression, generator:
   }
 }
 
+export function getOrEmitFunctionForCall(
+  declaration: ts.Declaration,
+  thisType: ts.Type | undefined,
+  argumentTypes: ts.Type[],
+  generator: LLVMGenerator
+) {
+  if (
+    !ts.isFunctionDeclaration(declaration) &&
+    !ts.isMethodDeclaration(declaration) &&
+    !ts.isIndexSignatureDeclaration(declaration) &&
+    !ts.isPropertyDeclaration(declaration) &&
+    !ts.isConstructorDeclaration(declaration)
+  ) {
+    return error(
+      `Invalid function call target '${getDeclarationBaseName(declaration)}' (${ts.SyntaxKind[declaration.kind]})`
+    );
+  }
+
+  return keepInsertionPoint(generator.builder, () => {
+    return emitFunctionDeclaration(declaration, thisType, argumentTypes, generator)!;
+  });
+}
+
 export function emitCallExpression(expression: ts.CallExpression, generator: LLVMGenerator): llvm.Value {
   const isMethod = isMethodReference(expression.expression, generator.checker);
-  let callee: llvm.Value;
-
+  const declaration = generator.checker.getSymbolAtLocation(expression.expression)!.valueDeclaration;
+  let thisType: ts.Type | undefined;
   if (isMethod) {
     const methodReference = expression.expression as ts.PropertyAccessExpression;
-    const thisType = generator.checker.getTypeAtLocation(methodReference.expression);
-    const property = generator.checker.getPropertyOfType(thisType, methodReference.name.text);
-    const declaration = property!.valueDeclaration;
-
-    if (!ts.isMethodSignature(declaration) && !ts.isMethodDeclaration(declaration)) {
-      return error(`Cannot call non-method property '${ts.SyntaxKind[declaration.kind]}'`);
-    }
-
-    const mangledName = mangleFunctionDeclaration(declaration, getTypeArguments(thisType), generator.checker);
-    callee = generator.module.getFunction(mangledName);
-
-    if (!callee) {
-      return error(`Function '${mangledName}' not found in module`);
-    }
-  } else {
-    callee = generator.emitExpression(expression.expression);
+    thisType = generator.checker.getTypeAtLocation(methodReference.expression);
   }
+
+  const argumentTypes = expression.arguments.map(generator.checker.getTypeAtLocation);
+  const callee = getOrEmitFunctionForCall(declaration, thisType, argumentTypes, generator);
 
   const args = expression.arguments.map(argument => generator.emitExpression(argument));
 
@@ -192,14 +204,21 @@ export function emitElementAccessExpression(
   expression: ts.ElementAccessExpression,
   generator: LLVMGenerator
 ): llvm.Value {
-  const subscript = getBuiltin("Array__number__subscript", generator.context, generator.module);
+  const arrayType = generator.checker.getTypeAtLocation(expression.expression);
+  const subscript = getMethod(
+    arrayType,
+    "subscript",
+    [generator.checker.getTypeAtLocation(expression.argumentExpression)],
+    generator
+  );
   const array = generator.emitExpression(expression.expression);
   const index = generator.loadIfValueType(generator.emitExpression(expression.argumentExpression));
   return generator.builder.createCall(subscript, [array, index]);
 }
 
 export function emitArrayLengthAccess(expression: ts.Expression, generator: LLVMGenerator) {
-  const lengthGetter = getBuiltin("Array__number__length", generator.context, generator.module);
+  const arrayType = generator.checker.getTypeAtLocation(expression);
+  const lengthGetter = getMethod(arrayType, "length", [], generator);
   const array = generator.emitExpression(expression);
   return generator.builder.createCall(lengthGetter, [array]);
 }
@@ -248,13 +267,17 @@ export function emitArrayLiteralExpression(
   expression: ts.ArrayLiteralExpression,
   generator: LLVMGenerator
 ): llvm.Value {
-  const constructor = getBuiltin("Array__number__constructor", generator.context, generator.module);
-  const push = getBuiltin("Array__number__push", generator.context, generator.module);
+  const arrayType = generator.checker.getTypeAtLocation(expression);
+  const elementType = getTypeArguments(arrayType)[0];
+  const constructor = getMethod(arrayType, "constructor", [], generator);
+  const push = getMethod(arrayType, "push", [elementType], generator);
   const array = generator.builder.createCall(constructor, []);
+
   for (const element of expression.elements) {
     const elementValue = generator.emitExpression(element);
     generator.builder.createCall(push, [array, elementValue]);
   }
+
   return array;
 }
 
@@ -286,11 +309,25 @@ export function emitObjectLiteralExpression(
 }
 
 export function emitNewExpression(expression: ts.NewExpression, generator: LLVMGenerator): llvm.Value {
-  const typeName = (expression.expression as ts.Identifier).getText();
-  const constructor = (generator.symbolTable.get(typeName) as Scope).getOptional("constructor");
-  if (!constructor) {
+  const declaration = generator.checker.getSymbolAtLocation(expression.expression)!.valueDeclaration;
+
+  if (!ts.isClassDeclaration(declaration)) {
+    return error("Cannot 'new' non-class type");
+  }
+
+  const constructorDeclaration = declaration.members.find(ts.isConstructorDeclaration);
+
+  if (!constructorDeclaration) {
     return error("Calling 'new' requires the type to have a constructor");
   }
+
+  const argumentTypes = expression.arguments!.map(generator.checker.getTypeAtLocation);
+  const thisType = generator.checker.getTypeAtLocation(expression);
+
+  const constructor = keepInsertionPoint(generator.builder, () => {
+    return emitFunctionDeclaration(constructorDeclaration, thisType, argumentTypes, generator)!;
+  });
+
   const args = expression.arguments!.map(argument => generator.emitExpression(argument));
-  return generator.builder.createCall(constructor as llvm.Value, args);
+  return generator.builder.createCall(constructor, args);
 }

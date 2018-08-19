@@ -5,3 +5,5 @@ function foo(a: number, b: number) {
 function bar(a: number, b: number) {
   foo(b, a);
 }
+
+bar(1, 2);

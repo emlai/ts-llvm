@@ -22,17 +22,6 @@ entry:
   ret i32 0
 }
 
-declare void @console__log(%string)
-
-define %B* @B__constructor() {
-entry:
-  %0 = call i8* @gc__allocate(i32 8)
-  %1 = bitcast i8* %0 to %B*
-  ret %B* %1
-}
-
-declare i8* @gc__allocate(i32)
-
 define %A* @A__constructor(double %b) {
 entry:
   %a = alloca double
@@ -47,6 +36,15 @@ entry:
   ret %A* %1
 }
 
+declare i8* @gc__allocate(i32)
+
+define %B* @B__constructor() {
+entry:
+  %0 = call i8* @gc__allocate(i32 8)
+  %1 = bitcast i8* %0 to %B*
+  ret %B* %1
+}
+
 define void @A__a(%A* %this) {
 entry:
   %b = getelementptr inbounds %A, %A* %this, i32 0, i32 0
@@ -58,3 +56,5 @@ entry:
   call void @console__log(%string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @0, i32 0, i32 0), i32 3 })
   ret void
 }
+
+declare void @console__log(%string)

@@ -3,14 +3,11 @@ source_filename = "main"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64"
 
-%string = type { i8*, i32 }
-
 define i32 @main() {
 entry:
+  %0 = call i1 @foo(i1 false, i1 true, i1 false)
   ret i32 0
 }
-
-declare void @console__log(%string)
 
 define i1 @foo(i1 %a, i1 %b, i1 %c) {
 entry:

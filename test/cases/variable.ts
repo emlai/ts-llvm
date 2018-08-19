@@ -7,3 +7,5 @@ function foo(param: number) {
   localVar = localParamAlias + localLet;
   return localVar;
 }
+
+foo(1);

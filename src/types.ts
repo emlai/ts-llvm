@@ -2,24 +2,28 @@ import * as llvm from "llvm-node";
 import * as ts from "typescript";
 import { LLVMGenerator } from "./codegen/generator";
 import { error } from "./diagnostics";
+import { mangleType } from "./mangle";
 
 export function getLLVMType(type: ts.Type, generator: LLVMGenerator): llvm.Type {
   const { context, checker } = generator;
 
-  if (type.flags & ts.TypeFlags.Boolean) {
+  // TODO: Inline literal types where possible.
+
+  if (type.flags & (ts.TypeFlags.Boolean | ts.TypeFlags.BooleanLiteral)) {
     return llvm.Type.getInt1Ty(context);
   }
 
-  if (type.flags & ts.TypeFlags.Number) {
+  if (type.flags & (ts.TypeFlags.Number | ts.TypeFlags.NumberLiteral)) {
     return llvm.Type.getDoubleTy(context);
   }
 
-  if (type.flags & ts.TypeFlags.String) {
+  if (type.flags & (ts.TypeFlags.String | ts.TypeFlags.StringLiteral)) {
     return getStringType(context);
   }
 
   if (type.flags & ts.TypeFlags.Object) {
-    return getStructType(type, generator).getPointerTo();
+    // TODO: Pass correct isOpaque parameter.
+    return getStructType(type, false, generator).getPointerTo();
   }
 
   if (type.flags & ts.TypeFlags.Void) {
@@ -33,7 +37,7 @@ export function getLLVMType(type: ts.Type, generator: LLVMGenerator): llvm.Type 
   return error(`Unhandled ts.Type '${checker.typeToString(type)}'`);
 }
 
-export function getStructType(type: ts.Type, generator: LLVMGenerator) {
+export function getStructType(type: ts.Type, isOpaque: boolean, generator: LLVMGenerator) {
   const { context, module, checker } = generator;
 
   const elements = checker
@@ -46,11 +50,13 @@ export function getStructType(type: ts.Type, generator: LLVMGenerator) {
   let struct: llvm.StructType | null;
 
   if (ts.isClassDeclaration(declaration)) {
-    const name = declaration.name!.text;
+    const name = mangleType(type, checker);
     struct = module.getTypeByName(name);
     if (!struct) {
       struct = llvm.StructType.create(context, name);
-      struct.setBody(elements);
+      if (!isOpaque) {
+        struct.setBody(elements);
+      }
     }
   } else {
     struct = llvm.StructType.get(context, elements);

@@ -6,7 +6,7 @@ import { error } from "./diagnostics";
 type ScopeValue = llvm.Value | Scope;
 
 interface ScopeData {
-  readonly declaration: ts.ClassDeclaration;
+  readonly declaration: ts.ClassDeclaration | ts.InterfaceDeclaration;
   readonly type: llvm.StructType;
 }
 

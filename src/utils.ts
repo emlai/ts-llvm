@@ -73,7 +73,7 @@ export function isArray(type: ts.Type) {
 }
 
 export function getTypeBaseName(type: ts.Type, checker: ts.TypeChecker) {
-  return type.symbol ? type.symbol.name : checker.typeToString(type);
+  return type.symbol ? type.symbol.name : checker.typeToString(checker.getBaseTypeOfLiteralType(type));
 }
 
 export function getMethod(type: ts.Type, name: string, argumentTypes: ts.Type[], generator: LLVMGenerator) {

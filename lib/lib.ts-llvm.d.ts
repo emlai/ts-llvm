@@ -19,7 +19,9 @@ interface Object {}
 
 interface RegExp {}
 
-interface String {}
+interface String {
+  concat(string: string): string;
+}
 
 declare namespace console {
   export function log(message: string): void;

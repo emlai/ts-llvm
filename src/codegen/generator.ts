@@ -4,7 +4,7 @@ import * as ts from "typescript";
 import { error, warn } from "../diagnostics";
 import { Scope, SymbolTable } from "../symbol-table";
 import { createLLVMFunction, isValueType } from "../utils";
-import { emitClassDeclaration, emitModuleDeclaration } from "./declaration";
+import { emitClassDeclaration, emitModuleDeclaration, visitInterfaceDeclaration } from "./declaration";
 import {
   emitArrayLiteralExpression,
   emitBinaryExpression,
@@ -98,6 +98,9 @@ export class LLVMGenerator {
       case ts.SyntaxKind.Constructor:
         // Emitted when called.
         break;
+      case ts.SyntaxKind.InterfaceDeclaration:
+        visitInterfaceDeclaration(node as ts.InterfaceDeclaration, parentScope, this);
+        break;
       case ts.SyntaxKind.ClassDeclaration:
         emitClassDeclaration(node as ts.ClassDeclaration, [], parentScope, this);
         break;
@@ -123,7 +126,6 @@ export class LLVMGenerator {
         emitVariableStatement(node as ts.VariableStatement, parentScope, this);
         break;
       case ts.SyntaxKind.EndOfFileToken:
-      case ts.SyntaxKind.InterfaceDeclaration:
         break;
       default:
         warn(`Unhandled ts.Node '${ts.SyntaxKind[node.kind]}': ${node.getText()}`);
@@ -164,12 +166,12 @@ export class LLVMGenerator {
     }
   }
 
-  loadIfValueType(value: llvm.Value): llvm.Value {
+  loadIfValueType = (value: llvm.Value): llvm.Value => {
     if (value.type.isPointerTy() && isValueType(value.type.elementType)) {
       return this.builder.createLoad(value);
     }
     return value;
-  }
+  };
 
   get currentFunction(): llvm.Function {
     return this.builder.getInsertBlock().parent!;

@@ -5,13 +5,14 @@ import { createGCAllocate } from "../builtins";
 import { error } from "../diagnostics";
 import { getDeclarationBaseName, mangleFunctionDeclaration, mangleType } from "../mangle";
 import { Scope } from "../symbol-table";
-import { getLLVMType, getStructType } from "../types";
-import { addTypeArguments, createLLVMFunction } from "../utils";
+import { getLLVMType, getStringType, getStructType } from "../types";
+import { addTypeArguments, createLLVMFunction, isValueType } from "../utils";
 import { LLVMGenerator } from "./generator";
 
 type FunctionLikeDeclaration =
   | ts.FunctionDeclaration
   | ts.MethodDeclaration
+  | ts.MethodSignature
   | ts.IndexSignatureDeclaration
   | ts.PropertyDeclaration
   | ts.ConstructorDeclaration;
@@ -53,6 +54,7 @@ export function emitFunctionDeclaration(
   const isConstructor = ts.isConstructorDeclaration(declaration);
   const hasThisParameter =
     ts.isMethodDeclaration(declaration) ||
+    ts.isMethodSignature(declaration) ||
     ts.isIndexSignatureDeclaration(declaration) ||
     ts.isPropertyDeclaration(declaration);
   const thisType = tsThisType
@@ -78,12 +80,16 @@ export function emitFunctionDeclaration(
   }
   const parameterTypes = argumentTypes.map(argumentType => getLLVMType(argumentType, generator));
   if (hasThisParameter) {
-    parameterTypes.unshift(thisType!.getPointerTo());
+    parameterTypes.unshift(isValueType(thisType!) ? thisType! : thisType!.getPointerTo());
   }
   const qualifiedName = mangleFunctionDeclaration(declaration, tsThisType, generator.checker);
   const func = createLLVMFunction(returnType, parameterTypes, qualifiedName, generator.module);
   const body =
-    ts.isIndexSignatureDeclaration(declaration) || ts.isPropertyDeclaration(declaration) ? undefined : declaration.body;
+    ts.isMethodSignature(declaration) ||
+    ts.isIndexSignatureDeclaration(declaration) ||
+    ts.isPropertyDeclaration(declaration)
+      ? undefined
+      : declaration.body;
 
   if (body) {
     generator.symbolTable.withScope(qualifiedName, bodyScope => {
@@ -125,6 +131,19 @@ export function emitFunctionDeclaration(
   const name = getDeclarationBaseName(declaration);
   parentScope.set(name, func);
   return func;
+}
+
+export function visitInterfaceDeclaration(
+  declaration: ts.InterfaceDeclaration,
+  parentScope: Scope,
+  generator: LLVMGenerator
+) {
+  const name = declaration.name.text;
+  parentScope.set(name, new Scope(name));
+
+  if (name === "String") {
+    parentScope.set("string", new Scope(name, { declaration, type: getStringType(generator.context) }));
+  }
 }
 
 export function emitClassDeclaration(

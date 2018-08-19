@@ -134,6 +134,7 @@ export function getOrEmitFunctionForCall(
   if (
     !ts.isFunctionDeclaration(declaration) &&
     !ts.isMethodDeclaration(declaration) &&
+    !ts.isMethodSignature(declaration) &&
     !ts.isIndexSignatureDeclaration(declaration) &&
     !ts.isPropertyDeclaration(declaration) &&
     !ts.isConstructorDeclaration(declaration)
@@ -167,7 +168,7 @@ export function emitCallExpression(expression: ts.CallExpression, generator: LLV
     args.unshift(generator.emitExpression(propertyAccess.expression));
   }
 
-  return generator.builder.createCall(callee, args);
+  return generator.builder.createCall(callee, args.map(generator.loadIfValueType));
 }
 
 export function emitPropertyAccessExpression(
@@ -232,7 +233,7 @@ export function emitPropertyAccessGEP(propertyName: string, value: llvm.Value, g
     return error("Property access not implemented for anonymous object types");
   }
   const typeScope = generator.symbolTable.get(typeName) as Scope;
-  const type = typeScope.data!.declaration;
+  const type = typeScope.data!.declaration as ts.ClassDeclaration;
 
   const indexList = [
     llvm.ConstantInt.get(generator.context, 0),

@@ -4,7 +4,7 @@ import * as ts from "typescript";
 import { error, warn } from "../diagnostics";
 import { Scope, SymbolTable } from "../symbol-table";
 import { createLLVMFunction, isValueType } from "../utils";
-import { emitClassDeclaration, emitFunctionDeclaration, emitModuleDeclaration } from "./declaration";
+import { emitClassDeclaration, emitModuleDeclaration } from "./declaration";
 import {
   emitArrayLiteralExpression,
   emitBinaryExpression,
@@ -48,7 +48,13 @@ export function emitLLVM(program: ts.Program): llvm.Module {
   builder.setInsertionPoint(R.last(main.getBasicBlocks())!);
   builder.createRet(llvm.Constant.getNullValue(mainReturnType));
 
-  llvm.verifyModule(module);
+  try {
+    llvm.verifyModule(module);
+  } catch (error) {
+    error.message += "\n" + module.print();
+    throw error;
+  }
+
   return module;
 }
 
@@ -87,16 +93,13 @@ export class LLVMGenerator {
 
     switch (node.kind) {
       case ts.SyntaxKind.FunctionDeclaration:
-        emitFunctionDeclaration(node as ts.FunctionDeclaration, parentScope, this);
-        break;
       case ts.SyntaxKind.MethodDeclaration:
-        emitFunctionDeclaration(node as ts.MethodDeclaration, parentScope, this);
-        break;
+      case ts.SyntaxKind.IndexSignature:
       case ts.SyntaxKind.Constructor:
-        emitFunctionDeclaration(node as ts.ConstructorDeclaration, parentScope, this);
+        // Emitted when called.
         break;
       case ts.SyntaxKind.ClassDeclaration:
-        emitClassDeclaration(node as ts.ClassDeclaration, parentScope, this);
+        emitClassDeclaration(node as ts.ClassDeclaration, [], parentScope, this);
         break;
       case ts.SyntaxKind.ModuleDeclaration:
         emitModuleDeclaration(node as ts.ModuleDeclaration, parentScope, this);

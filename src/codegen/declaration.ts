@@ -16,15 +16,21 @@ type FunctionLikeDeclaration =
   | ts.PropertyDeclaration
   | ts.ConstructorDeclaration;
 
-function getFunctionDeclarationScope(declaration: FunctionLikeDeclaration, generator: LLVMGenerator) {
+function getFunctionDeclarationScope(
+  declaration: FunctionLikeDeclaration,
+  thisType: ts.Type | undefined,
+  generator: LLVMGenerator
+): Scope {
+  if (thisType) {
+    return generator.symbolTable.get(mangleType(thisType, generator.checker)) as Scope;
+  }
+
   const { parent } = declaration;
 
   if (ts.isSourceFile(parent)) {
     return generator.symbolTable.globalScope;
   } else if (ts.isModuleBlock(parent)) {
     return generator.symbolTable.get(parent.parent.name.text) as Scope;
-  } else if (ts.isClassDeclaration(parent) || ts.isInterfaceDeclaration(parent)) {
-    return generator.symbolTable.get(parent.name!.text) as Scope;
   } else {
     return error(`Unhandled function declaration parent kind '${ts.SyntaxKind[parent.kind]}'`);
   }
@@ -43,18 +49,15 @@ export function emitFunctionDeclaration(
     return preExisting;
   }
 
-  const parentScope = getFunctionDeclarationScope(declaration, generator);
+  const parentScope = getFunctionDeclarationScope(declaration, tsThisType, generator);
   const isConstructor = ts.isConstructorDeclaration(declaration);
   const hasThisParameter =
     ts.isMethodDeclaration(declaration) ||
     ts.isIndexSignatureDeclaration(declaration) ||
     ts.isPropertyDeclaration(declaration);
-
-  let thisType: llvm.StructType | undefined;
-  if (isConstructor || hasThisParameter) {
-    const parent = (declaration as ts.ConstructorDeclaration | ts.MethodDeclaration).parent as ts.ClassDeclaration;
-    thisType = (generator.symbolTable.get(parent.name!.text) as Scope).data!.type;
-  }
+  const thisType = tsThisType
+    ? (generator.symbolTable.get(mangleType(tsThisType, generator.checker)) as Scope).data!.type
+    : undefined;
   let thisValue: llvm.Value;
 
   let tsReturnType: ts.Type;
@@ -142,7 +145,7 @@ export function emitClassDeclaration(
   }
 
   const isOpaque = !!(ts.getCombinedModifierFlags(declaration) & ts.ModifierFlags.Ambient);
-  const name = declaration.name!.text;
+  const name = mangleType(thisType, generator.checker);
   const type = getStructType(thisType, isOpaque, generator);
   const scope = new Scope(name, { declaration, type });
   parentScope.set(name, scope);

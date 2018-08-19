@@ -49,23 +49,28 @@ private:
   }
 };
 
+#define ARRAY_INSTANTIATION(TYPE, TYPENAME)                                                                           \
+                                                                                                                      \
+Array<TYPE>* Array__##TYPENAME##__constructor() {                                                                     \
+  auto* array = gc__allocate(sizeof(Array<TYPE>));                                                                    \
+  return new (array) Array<TYPE>();                                                                                   \
+}                                                                                                                     \
+                                                                                                                      \
+void Array__##TYPENAME##__push(Array<TYPE>* array, TYPE value) {                                                      \
+  array->push(value);                                                                                                 \
+}                                                                                                                     \
+                                                                                                                      \
+TYPE* Array__##TYPENAME##__subscript(Array<TYPE>* array, double index) {                                              \
+  return (*array)[static_cast<uint32_t>(index)];                                                                      \
+}                                                                                                                     \
+                                                                                                                      \
+double Array__##TYPENAME##__length(Array<TYPE>* array) {                                                              \
+  return static_cast<double>(array->length());                                                                        \
+}                                                                                                                     \
+
 extern "C" {
 
-Array<double>* Array__number__constructor() {
-  auto* array = gc__allocate(sizeof(Array<double>));
-  return new (array) Array<double>();
-}
-
-void Array__number__push(Array<double>* array, double value) {
-  array->push(value);
-}
-
-double* Array__number__subscript(Array<double>* array, double index) {
-  return (*array)[static_cast<uint32_t>(index)];
-}
-
-double Array__number__length(Array<double>* array) {
-  return static_cast<double>(array->length());
-}
+ARRAY_INSTANTIATION(double, number)
+ARRAY_INSTANTIATION(bool, boolean)
 
 }

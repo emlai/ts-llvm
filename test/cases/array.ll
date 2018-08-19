@@ -3,10 +3,12 @@ source_filename = "main"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64"
 
+%Array__boolean = type opaque
 %Array__number = type opaque
 
 define i32 @main() {
 entry:
+  %d = alloca %Array__boolean*
   %c = alloca double
   %b = alloca double
   %a = call %Array__number* @Array__number__constructor()
@@ -26,6 +28,13 @@ entry:
   store double %7, double* %2
   %8 = call double @Array__number__length(%Array__number* %a)
   store double %8, double* %c
+  %9 = call %Array__boolean* @Array__boolean__constructor()
+  call void @Array__boolean__push(%Array__boolean* %9, i1 false)
+  call void @Array__boolean__push(%Array__boolean* %9, i1 true)
+  %10 = call double @Array__number__length(%Array__number* %a)
+  %11 = fcmp oeq double %10, 4.000000e+00
+  call void @Array__boolean__push(%Array__boolean* %9, i1 %11)
+  store %Array__boolean* %9, %Array__boolean** %d
   ret i32 0
 }
 
@@ -36,3 +45,7 @@ declare void @Array__number__push(%Array__number*, double)
 declare double* @Array__number__subscript(%Array__number*, double)
 
 declare double @Array__number__length(%Array__number*)
+
+declare %Array__boolean* @Array__boolean__constructor()
+
+declare void @Array__boolean__push(%Array__boolean*, i1)

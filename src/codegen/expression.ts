@@ -274,7 +274,7 @@ export function emitArrayLiteralExpression(
   const array = generator.builder.createCall(constructor, []);
 
   for (const element of expression.elements) {
-    const elementValue = generator.emitExpression(element);
+    const elementValue = generator.loadIfValueType(generator.emitExpression(element));
     generator.builder.createCall(push, [array, elementValue]);
   }
 

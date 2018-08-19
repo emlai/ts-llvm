@@ -3,11 +3,19 @@ source_filename = "main"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64"
 
+%Array__string = type opaque
+%string = type { i8*, i32 }
 %Array__boolean = type opaque
 %Array__number = type opaque
 
+@0 = private unnamed_addr constant [4 x i8] c"bar\00"
+@1 = private unnamed_addr constant [4 x i8] c"baz\00"
+@2 = private unnamed_addr constant [4 x i8] c"foo\00"
+
 define i32 @main() {
 entry:
+  %e = alloca %Array__string*
+  %baz = alloca %string
   %d = alloca %Array__boolean*
   %c = alloca double
   %b = alloca double
@@ -35,6 +43,13 @@ entry:
   %11 = fcmp oeq double %10, 4.000000e+00
   call void @Array__boolean__push(%Array__boolean* %9, i1 %11)
   store %Array__boolean* %9, %Array__boolean** %d
+  store %string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @1, i32 0, i32 0), i32 3 }, %string* %baz
+  %12 = call %Array__string* @Array__string__constructor()
+  call void @Array__string__push(%Array__string* %12, %string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @2, i32 0, i32 0), i32 3 })
+  call void @Array__string__push(%Array__string* %12, %string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @0, i32 0, i32 0), i32 3 })
+  %13 = load %string, %string* %baz
+  call void @Array__string__push(%Array__string* %12, %string %13)
+  store %Array__string* %12, %Array__string** %e
   ret i32 0
 }
 
@@ -49,3 +64,7 @@ declare double @Array__number__length(%Array__number*)
 declare %Array__boolean* @Array__boolean__constructor()
 
 declare void @Array__boolean__push(%Array__boolean*, i1)
+
+declare %Array__string* @Array__string__constructor()
+
+declare void @Array__string__push(%Array__string*, %string)

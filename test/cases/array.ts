@@ -5,3 +5,6 @@ a[1] = a[a[b]];
 let c = a.length;
 
 let d = [false, true, a.length === 4];
+const bar = "bar";
+let baz = "baz";
+let e = ["foo", bar, baz];

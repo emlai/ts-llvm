@@ -3,6 +3,7 @@
 #include <iostream>
 #include <new>
 #include "gc.h"
+#include "string.h"
 
 template<typename T>
 class Array {
@@ -72,5 +73,6 @@ extern "C" {
 
 ARRAY_INSTANTIATION(double, number)
 ARRAY_INSTANTIATION(bool, boolean)
+ARRAY_INSTANTIATION(string, string)
 
 }

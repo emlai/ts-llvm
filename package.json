@@ -14,8 +14,7 @@
   "lint-staged": {
     "linters": {
       "{src,test}/**/*": [
-        "tslint --project tsconfig.json --fix",
-        "git add"
+        "tslint --project tsconfig.json --fix"
       ]
     },
     "ignore": [

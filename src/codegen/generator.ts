@@ -161,6 +161,8 @@ export class LLVMGenerator {
         return emitObjectLiteralExpression(expression as ts.ObjectLiteralExpression, this);
       case ts.SyntaxKind.NewExpression:
         return emitNewExpression(expression as ts.NewExpression, this);
+      case ts.SyntaxKind.ParenthesizedExpression:
+        return this.emitExpression((expression as ts.ParenthesizedExpression).expression);
       default:
         return error(`Unhandled ts.Expression '${ts.SyntaxKind[expression.kind]}'`);
     }

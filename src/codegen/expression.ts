@@ -1,11 +1,19 @@
 import * as llvm from "llvm-node";
 import * as ts from "typescript";
-import { createGCAllocate } from "../builtins";
+import { createGCAllocate, getBuiltin } from "../builtins";
 import { error } from "../diagnostics";
 import { getDeclarationBaseName } from "../mangle";
 import { Scope } from "../symbol-table";
 import { getLLVMType, getStringType } from "../types";
-import { getMemberIndex, getMethod, getTypeArguments, isArray, isMethodReference, keepInsertionPoint } from "../utils";
+import {
+  getMemberIndex,
+  getMethod,
+  getTypeArguments,
+  isArray,
+  isMethodReference,
+  isString,
+  keepInsertionPoint
+} from "../utils";
 import { emitFunctionDeclaration } from "./declaration";
 import { LLVMGenerator } from "./generator";
 
@@ -67,6 +75,19 @@ export function emitPostfixUnaryExpression(
   }
 }
 
+function emitBinaryPlus(left: llvm.Value, right: llvm.Value, generator: LLVMGenerator): llvm.Value {
+  if (left.type.isDoubleTy() && right.type.isDoubleTy()) {
+    return generator.builder.createFAdd(left, right);
+  }
+
+  if (isString(left.type) && isString(right.type)) {
+    const concat = getBuiltin("string__concat", generator.context, generator.module);
+    return generator.builder.createCall(concat, [left, right]);
+  }
+
+  return error("Invalid operand types to binary plus");
+}
+
 export function emitBinaryExpression(expression: ts.BinaryExpression, generator: LLVMGenerator): llvm.Value {
   const left = generator.emitExpression(expression.left);
   const right = generator.emitExpression(expression.right);
@@ -87,7 +108,7 @@ export function emitBinaryExpression(expression: ts.BinaryExpression, generator:
     case ts.SyntaxKind.GreaterThanEqualsToken:
       return generator.builder.createFCmpOGE(generator.loadIfValueType(left), generator.loadIfValueType(right));
     case ts.SyntaxKind.PlusToken:
-      return generator.builder.createFAdd(generator.loadIfValueType(left), generator.loadIfValueType(right));
+      return emitBinaryPlus(generator.loadIfValueType(left), generator.loadIfValueType(right), generator);
     case ts.SyntaxKind.MinusToken:
       return generator.builder.createFSub(generator.loadIfValueType(left), generator.loadIfValueType(right));
     case ts.SyntaxKind.AsteriskToken:

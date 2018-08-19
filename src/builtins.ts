@@ -2,14 +2,17 @@ import * as llvm from "llvm-node";
 import { LLVMGenerator } from "./codegen/generator";
 import { error } from "./diagnostics";
 import { getSize } from "./memory-layout";
+import { getStringType } from "./types";
 import { isValueType } from "./utils";
 
-type BuiltinName = "gc__allocate";
+type BuiltinName = "gc__allocate" | "string__concat";
 
 function getBuiltinFunctionType(name: BuiltinName, context: llvm.LLVMContext) {
   switch (name) {
     case "gc__allocate":
       return llvm.FunctionType.get(llvm.Type.getInt8PtrTy(context), [llvm.Type.getInt32Ty(context)], false);
+    case "string__concat":
+      return llvm.FunctionType.get(getStringType(context), [getStringType(context), getStringType(context)], false);
   }
 }
 

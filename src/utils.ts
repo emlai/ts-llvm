@@ -38,7 +38,7 @@ export function getMemberIndex(name: string, declaration: ts.ClassDeclaration) {
 }
 
 export function isValueType(type: llvm.Type) {
-  return type.isDoubleTy() || type.isIntegerTy() || type.isPointerTy() || (type.isStructTy() && type.name === "string");
+  return type.isDoubleTy() || type.isIntegerTy() || type.isPointerTy() || isString(type);
 }
 
 export function getTypeArguments(type: ts.Type) {
@@ -70,6 +70,10 @@ export function isMethodReference(expression: ts.Expression, checker: ts.TypeChe
 
 export function isArray(type: ts.Type) {
   return type.symbol.name === "Array";
+}
+
+export function isString(type: llvm.Type) {
+  return type.isStructTy() && type.name === "string";
 }
 
 export function getTypeBaseName(type: ts.Type, checker: ts.TypeChecker) {

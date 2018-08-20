@@ -14,7 +14,8 @@
     "no-shadowed-variable": [true, { "temporalDeadZone": false }],
     "no-unused-variable": [true, "check-parameters"],
     "prefer-readonly": true,
-    "prettier": true
+    "prettier": true,
+    "variable-name": true
   },
   "rulesDirectory": ["tslint-plugin-prettier"]
 }

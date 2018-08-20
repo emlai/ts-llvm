@@ -21,6 +21,7 @@ interface RegExp {}
 
 interface String {
   concat(string: string): string;
+  readonly length: number;
 }
 
 declare namespace console {

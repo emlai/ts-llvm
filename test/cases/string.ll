@@ -9,9 +9,11 @@ target triple = "x86_64"
 @1 = private unnamed_addr constant [4 x i8] c"123\00"
 @2 = private unnamed_addr constant [4 x i8] c"AAA\00"
 @3 = private unnamed_addr constant [4 x i8] c"   \00"
+@4 = private unnamed_addr constant [7 x i8] c"123456\00"
 
 define i32 @main() {
 entry:
+  %l = alloca double
   %a = alloca %string
   store %string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @0, i32 0, i32 0), i32 3 }, %string* %a
   %a.load = load %string, %string* %a
@@ -23,6 +25,16 @@ entry:
   %1 = call %string @string__concat(%string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @3, i32 0, i32 0), i32 3 }, %string %b)
   %2 = call %string @string__concat(%string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @2, i32 0, i32 0), i32 3 }, %string %1)
   call void @console__log(%string %2)
+  store double 6.000000e+00, double* %l
+  %3 = extractvalue %string %b, 1
+  %b.length = uitofp i32 %3 to double
+  %a.load3 = load %string, %string* %a
+  %4 = extractvalue %string %a.load3, 1
+  %a.load3.length = uitofp i32 %4 to double
+  %a.load4 = load %string, %string* %a
+  %5 = call %string @string__concat(%string %a.load4, %string %b)
+  %6 = extractvalue %string %5, 1
+  %.length = uitofp i32 %6 to double
   ret i32 0
 }
 

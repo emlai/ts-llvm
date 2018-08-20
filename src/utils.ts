@@ -29,10 +29,10 @@ export function createLLVMFunction(
 }
 
 export function isValueType(type: llvm.Type) {
-  return type.isDoubleTy() || type.isIntegerTy() || type.isPointerTy() || isString(type);
+  return type.isDoubleTy() || type.isIntegerTy() || type.isPointerTy() || isLLVMString(type);
 }
 
-export function isString(type: llvm.Type) {
+export function isLLVMString(type: llvm.Type) {
   return type.isStructTy() && type.name === "string";
 }
 

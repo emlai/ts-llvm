@@ -4,9 +4,9 @@ import { createGCAllocate, getBuiltin } from "../builtins";
 import { error } from "../diagnostics";
 import { getDeclarationBaseName } from "../mangle";
 import { Scope } from "../symbol-table";
-import { getPropertyIndex, getTypeArguments, isArray, isMethodReference } from "../tsc-utils";
+import { getPropertyIndex, getTypeArguments, isArray, isMethodReference, isString } from "../tsc-utils";
 import { getLLVMType, getStringType } from "../types";
-import { getMethod, isString, keepInsertionPoint } from "../utils";
+import { getMethod, isLLVMString, keepInsertionPoint } from "../utils";
 import { emitFunctionDeclaration } from "./declaration";
 import { LLVMGenerator } from "./generator";
 import { createEntryBlockAlloca } from "./statement";
@@ -78,7 +78,7 @@ function emitBinaryPlus(left: llvm.Value, right: llvm.Value, generator: LLVMGene
     return generator.builder.createFAdd(left, right);
   }
 
-  if (isString(left.type) && isString(right.type)) {
+  if (isLLVMString(left.type) && isLLVMString(right.type)) {
     const concat = getBuiltin("string__concat", generator.context, generator.module);
     return generator.builder.createCall(concat, [left, right]);
   }
@@ -218,8 +218,14 @@ export function emitPropertyAccessExpression(
   const left = expression.expression;
   const propertyName = expression.name.text;
 
-  if (propertyName === "length" && isArray(generator.checker.getTypeAtLocation(left))) {
-    return emitArrayLengthAccess(left, generator);
+  if (propertyName === "length") {
+    if (isArray(generator.checker.getTypeAtLocation(left))) {
+      return emitArrayLengthAccess(left, generator);
+    }
+
+    if (isString(generator.checker.getTypeAtLocation(left))) {
+      return emitStringLengthAccess(left, generator);
+    }
   }
 
   if (ts.isIdentifier(left)) {
@@ -253,6 +259,12 @@ export function emitArrayLengthAccess(expression: ts.Expression, generator: LLVM
   const lengthGetter = getMethod(arrayType, "length", [], generator);
   const array = generator.emitExpression(expression);
   return generator.builder.createCall(lengthGetter, [array]);
+}
+
+export function emitStringLengthAccess(expression: ts.Expression, generator: LLVMGenerator) {
+  const string = generator.emitExpression(expression);
+  const length = generator.builder.createExtractValue(string, [1]);
+  return generator.builder.createUIToFP(length, llvm.Type.getDoubleTy(generator.context), string.name + ".length");
 }
 
 export function emitPropertyAccessGEP(

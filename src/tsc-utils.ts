@@ -44,7 +44,11 @@ export function isMethodReference(expression: ts.Expression, checker: ts.TypeChe
 }
 
 export function isArray(type: ts.Type) {
-  return type.symbol.name === "Array";
+  return type.symbol && type.symbol.name === "Array";
+}
+
+export function isString(type: ts.Type) {
+  return type.flags & (ts.TypeFlags.String | ts.TypeFlags.StringLiteral);
 }
 
 export function getTypeBaseName(type: ts.Type, checker: ts.TypeChecker) {

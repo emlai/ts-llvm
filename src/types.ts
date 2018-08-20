@@ -3,6 +3,7 @@ import * as ts from "typescript";
 import { LLVMGenerator } from "./codegen/generator";
 import { error } from "./diagnostics";
 import { mangleType } from "./mangle";
+import { isString } from "./tsc-utils";
 
 export function getLLVMType(type: ts.Type, generator: LLVMGenerator): llvm.Type {
   const { context, checker } = generator;
@@ -17,7 +18,7 @@ export function getLLVMType(type: ts.Type, generator: LLVMGenerator): llvm.Type 
     return llvm.Type.getDoubleTy(context);
   }
 
-  if (type.flags & (ts.TypeFlags.String | ts.TypeFlags.StringLiteral)) {
+  if (isString(type)) {
     return getStringType(context);
   }
 

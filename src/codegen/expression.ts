@@ -16,6 +16,7 @@ import {
 } from "../utils";
 import { emitFunctionDeclaration } from "./declaration";
 import { LLVMGenerator } from "./generator";
+import { createEntryBlockAlloca } from "./statement";
 
 function castToInt32AndBack(
   values: llvm.Value[],
@@ -37,14 +38,16 @@ export function emitPrefixUnaryExpression(expression: ts.PrefixUnaryExpression, 
     case ts.SyntaxKind.MinusToken:
       return generator.builder.createFNeg(generator.loadIfValueType(operand));
     case ts.SyntaxKind.PlusPlusToken:
-      return generator.builder.createStore(
+      return emitAssignment(
+        operand,
         generator.builder.createFAdd(generator.loadIfValueType(operand), llvm.ConstantFP.get(generator.context, 1)),
-        operand
+        generator
       );
     case ts.SyntaxKind.MinusMinusToken:
-      return generator.builder.createStore(
+      return emitAssignment(
+        operand,
         generator.builder.createFSub(generator.loadIfValueType(operand), llvm.ConstantFP.get(generator.context, 1)),
-        operand
+        generator
       );
     case ts.SyntaxKind.TildeToken:
       return castToInt32AndBack([operand], generator, ([value]) => generator.builder.createNot(value));
@@ -63,13 +66,13 @@ export function emitPostfixUnaryExpression(
     case ts.SyntaxKind.PlusPlusToken: {
       const oldValue = generator.loadIfValueType(operand);
       const newValue = generator.builder.createFAdd(oldValue, llvm.ConstantFP.get(generator.context, 1));
-      generator.builder.createStore(newValue, operand);
+      emitAssignment(operand, newValue, generator);
       return oldValue;
     }
     case ts.SyntaxKind.MinusMinusToken: {
       const oldValue = generator.loadIfValueType(operand);
       const newValue = generator.builder.createFSub(oldValue, llvm.ConstantFP.get(generator.context, 1));
-      generator.builder.createStore(newValue, operand);
+      emitAssignment(operand, newValue, generator);
       return oldValue;
     }
   }
@@ -88,13 +91,22 @@ function emitBinaryPlus(left: llvm.Value, right: llvm.Value, generator: LLVMGene
   return error("Invalid operand types to binary plus");
 }
 
+function emitAssignment(left: llvm.Value, right: llvm.Value, generator: LLVMGenerator): llvm.Value {
+  if (left instanceof llvm.Argument) {
+    const alloca = createEntryBlockAlloca(left.type, left.name + ".alloca", generator);
+    generator.symbolTable.currentScope.overwrite(left.name, alloca);
+    left = alloca;
+  }
+  return generator.builder.createStore(generator.loadIfValueType(right), left);
+}
+
 export function emitBinaryExpression(expression: ts.BinaryExpression, generator: LLVMGenerator): llvm.Value {
   const left = generator.emitExpression(expression.left);
   const right = generator.emitExpression(expression.right);
 
   switch (expression.operatorToken.kind) {
     case ts.SyntaxKind.EqualsToken:
-      return generator.builder.createStore(generator.loadIfValueType(right), left);
+      return emitAssignment(left, right, generator);
     case ts.SyntaxKind.EqualsEqualsEqualsToken:
       return generator.builder.createFCmpOEQ(generator.loadIfValueType(left), generator.loadIfValueType(right));
     case ts.SyntaxKind.ExclamationEqualsEqualsToken:

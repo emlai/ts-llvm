@@ -36,7 +36,7 @@ export function emitExpressionStatement(statement: ts.ExpressionStatement, gener
 }
 
 export function emitIfStatement(statement: ts.IfStatement, parentScope: Scope, generator: LLVMGenerator): void {
-  const condition = generator.emitExpression(statement.expression);
+  const condition = generator.loadIfValueType(generator.emitExpression(statement.expression));
   const thenBlock = llvm.BasicBlock.create(generator.context, "then", generator.currentFunction);
   const elseBlock = llvm.BasicBlock.create(generator.context, "else", generator.currentFunction);
   const endBlock = llvm.BasicBlock.create(generator.context, "endif", generator.currentFunction);
@@ -102,7 +102,7 @@ export function emitVariableStatement(
   }
 }
 
-function createEntryBlockAlloca(type: llvm.Type, name: string, generator: LLVMGenerator): llvm.AllocaInst {
+export function createEntryBlockAlloca(type: llvm.Type, name: string, generator: LLVMGenerator): llvm.AllocaInst {
   const builder = new llvm.IRBuilder(generator.currentFunction.getEntryBlock()!);
   const arraySize = undefined;
   return builder.createAlloca(type, arraySize, name);

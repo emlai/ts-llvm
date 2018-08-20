@@ -39,6 +39,14 @@ export class Scope extends Map<string, ScopeValue> {
 
     return error(`Overwriting identifier '${identifier}' in symbol table`);
   }
+
+  overwrite(identifier: string, value: ScopeValue) {
+    if (this.getOptional(identifier)) {
+      return super.set(identifier, value);
+    }
+
+    return error(`Identifier '${identifier}' being overwritten not found in symbol table`);
+  }
 }
 
 export class SymbolTable {
@@ -70,6 +78,10 @@ export class SymbolTable {
 
   get globalScope(): Scope {
     return this.scopes[0];
+  }
+
+  get currentScope(): Scope {
+    return this.scopes[this.scopes.length - 1];
   }
 
   withScope(scopeName: string | undefined, body: (scope: Scope) => void): void {

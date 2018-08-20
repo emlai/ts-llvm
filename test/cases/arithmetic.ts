@@ -1,12 +1,14 @@
 function foo(a: number, b: number) {
-  let aa = +a;
-
+  a = +a;
   -a;
   ~a;
-  aa++;
-  aa--;
-  ++aa;
-  --aa;
+  a++;
+  a--;
+  ++a;
+  --a;
+}
+
+function bar(a: number, b: number) {
   a + b;
   a - b;
   a * b;
@@ -36,3 +38,4 @@ function foo(a: number, b: number) {
 }
 
 foo(1, 2);
+bar(1, 2);

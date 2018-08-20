@@ -32,11 +32,11 @@ function emitIfBranch(
 }
 
 export function emitExpressionStatement(statement: ts.ExpressionStatement, generator: LLVMGenerator): void {
-  generator.emitExpression(statement.expression);
+  generator.emitLvalueExpression(statement.expression);
 }
 
 export function emitIfStatement(statement: ts.IfStatement, parentScope: Scope, generator: LLVMGenerator): void {
-  const condition = generator.loadIfValueType(generator.emitExpression(statement.expression));
+  const condition = generator.emitExpression(statement.expression);
   const thenBlock = llvm.BasicBlock.create(generator.context, "then", generator.currentFunction);
   const elseBlock = llvm.BasicBlock.create(generator.context, "else", generator.currentFunction);
   const endBlock = llvm.BasicBlock.create(generator.context, "endif", generator.currentFunction);
@@ -72,7 +72,7 @@ export function emitWhileStatement(statement: ts.WhileStatement, generator: LLVM
 
 export function emitReturnStatement(statement: ts.ReturnStatement, generator: LLVMGenerator): void {
   if (statement.expression) {
-    generator.builder.createRet(generator.loadIfValueType(generator.emitExpression(statement.expression)));
+    generator.builder.createRet(generator.emitExpression(statement.expression));
   } else {
     generator.builder.createRetVoid();
   }
@@ -86,7 +86,7 @@ export function emitVariableStatement(
   for (const declaration of statement.declarationList.declarations) {
     // TODO: Handle destructuring declarations.
     const name = declaration.name.getText();
-    const initializer = generator.loadIfValueType(generator.emitExpression(declaration.initializer!));
+    const initializer = generator.emitExpression(declaration.initializer!);
 
     if (isVarConst(declaration)) {
       if (!(initializer instanceof llvm.Argument)) {

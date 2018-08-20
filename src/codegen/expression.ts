@@ -16,34 +16,34 @@ function castToInt32AndBack(
   generator: LLVMGenerator,
   emit: (ints: llvm.Value[]) => llvm.Value
 ): llvm.Value {
-  const ints = values.map(value => {
-    return generator.builder.createFPToSI(generator.loadIfValueType(value), llvm.Type.getInt32Ty(generator.context));
-  });
+  const ints = values.map(value => generator.builder.createFPToSI(value, llvm.Type.getInt32Ty(generator.context)));
   return generator.builder.createSIToFP(emit(ints), llvm.Type.getDoubleTy(generator.context));
 }
 
 export function emitPrefixUnaryExpression(expression: ts.PrefixUnaryExpression, generator: LLVMGenerator): llvm.Value {
-  const operand = generator.emitExpression(expression.operand);
+  const { operand } = expression;
 
   switch (expression.operator) {
     case ts.SyntaxKind.PlusToken:
-      return generator.loadIfValueType(operand);
+      return generator.emitExpression(operand);
     case ts.SyntaxKind.MinusToken:
-      return generator.builder.createFNeg(generator.loadIfValueType(operand));
+      return generator.builder.createFNeg(generator.emitExpression(operand));
     case ts.SyntaxKind.PlusPlusToken:
       return emitAssignment(
-        operand,
-        generator.builder.createFAdd(generator.loadIfValueType(operand), llvm.ConstantFP.get(generator.context, 1)),
+        generator.emitLvalueExpression(operand),
+        generator.builder.createFAdd(generator.emitExpression(operand), llvm.ConstantFP.get(generator.context, 1)),
         generator
       );
     case ts.SyntaxKind.MinusMinusToken:
       return emitAssignment(
-        operand,
-        generator.builder.createFSub(generator.loadIfValueType(operand), llvm.ConstantFP.get(generator.context, 1)),
+        generator.emitLvalueExpression(operand),
+        generator.builder.createFSub(generator.emitExpression(operand), llvm.ConstantFP.get(generator.context, 1)),
         generator
       );
     case ts.SyntaxKind.TildeToken:
-      return castToInt32AndBack([operand], generator, ([value]) => generator.builder.createNot(value));
+      return castToInt32AndBack([generator.emitExpression(operand)], generator, ([value]) =>
+        generator.builder.createNot(value)
+      );
     case ts.SyntaxKind.ExclamationToken:
       return error(`Unhandled ts.PrefixUnaryOperator operator '${ts.SyntaxKind[expression.operator]}'`);
   }
@@ -53,19 +53,19 @@ export function emitPostfixUnaryExpression(
   expression: ts.PostfixUnaryExpression,
   generator: LLVMGenerator
 ): llvm.Value {
-  const operand = generator.emitExpression(expression.operand);
+  const { operand } = expression;
 
   switch (expression.operator) {
     case ts.SyntaxKind.PlusPlusToken: {
-      const oldValue = generator.loadIfValueType(operand);
+      const oldValue = generator.emitExpression(operand);
       const newValue = generator.builder.createFAdd(oldValue, llvm.ConstantFP.get(generator.context, 1));
-      emitAssignment(operand, newValue, generator);
+      emitAssignment(generator.emitLvalueExpression(operand), newValue, generator);
       return oldValue;
     }
     case ts.SyntaxKind.MinusMinusToken: {
-      const oldValue = generator.loadIfValueType(operand);
+      const oldValue = generator.emitExpression(operand);
       const newValue = generator.builder.createFSub(oldValue, llvm.ConstantFP.get(generator.context, 1));
-      emitAssignment(operand, newValue, generator);
+      emitAssignment(generator.emitLvalueExpression(operand), newValue, generator);
       return oldValue;
     }
   }
@@ -90,61 +90,72 @@ function emitAssignment(left: llvm.Value, right: llvm.Value, generator: LLVMGene
     generator.symbolTable.currentScope.overwrite(left.name, alloca);
     left = alloca;
   }
-  return generator.builder.createStore(generator.loadIfValueType(right), left);
+  return generator.builder.createStore(right, left);
 }
 
 export function emitBinaryExpression(expression: ts.BinaryExpression, generator: LLVMGenerator): llvm.Value {
-  const left = generator.emitExpression(expression.left);
-  const right = generator.emitExpression(expression.right);
+  const { left, right } = expression;
 
   switch (expression.operatorToken.kind) {
     case ts.SyntaxKind.EqualsToken:
-      return emitAssignment(left, right, generator);
+      return emitAssignment(generator.emitLvalueExpression(left), generator.emitExpression(right), generator);
     case ts.SyntaxKind.EqualsEqualsEqualsToken:
-      return generator.builder.createFCmpOEQ(generator.loadIfValueType(left), generator.loadIfValueType(right));
+      return generator.builder.createFCmpOEQ(generator.emitExpression(left), generator.emitExpression(right));
     case ts.SyntaxKind.ExclamationEqualsEqualsToken:
-      return generator.builder.createFCmpONE(generator.loadIfValueType(left), generator.loadIfValueType(right));
+      return generator.builder.createFCmpONE(generator.emitExpression(left), generator.emitExpression(right));
     case ts.SyntaxKind.LessThanToken:
-      return generator.builder.createFCmpOLT(generator.loadIfValueType(left), generator.loadIfValueType(right));
+      return generator.builder.createFCmpOLT(generator.emitExpression(left), generator.emitExpression(right));
     case ts.SyntaxKind.GreaterThanToken:
-      return generator.builder.createFCmpOGT(generator.loadIfValueType(left), generator.loadIfValueType(right));
+      return generator.builder.createFCmpOGT(generator.emitExpression(left), generator.emitExpression(right));
     case ts.SyntaxKind.LessThanEqualsToken:
-      return generator.builder.createFCmpOLE(generator.loadIfValueType(left), generator.loadIfValueType(right));
+      return generator.builder.createFCmpOLE(generator.emitExpression(left), generator.emitExpression(right));
     case ts.SyntaxKind.GreaterThanEqualsToken:
-      return generator.builder.createFCmpOGE(generator.loadIfValueType(left), generator.loadIfValueType(right));
+      return generator.builder.createFCmpOGE(generator.emitExpression(left), generator.emitExpression(right));
     case ts.SyntaxKind.PlusToken:
-      return emitBinaryPlus(generator.loadIfValueType(left), generator.loadIfValueType(right), generator);
+      return emitBinaryPlus(generator.emitExpression(left), generator.emitExpression(right), generator);
     case ts.SyntaxKind.MinusToken:
-      return generator.builder.createFSub(generator.loadIfValueType(left), generator.loadIfValueType(right));
+      return generator.builder.createFSub(generator.emitExpression(left), generator.emitExpression(right));
     case ts.SyntaxKind.AsteriskToken:
-      return generator.builder.createFMul(generator.loadIfValueType(left), generator.loadIfValueType(right));
+      return generator.builder.createFMul(generator.emitExpression(left), generator.emitExpression(right));
     case ts.SyntaxKind.SlashToken:
-      return generator.builder.createFDiv(generator.loadIfValueType(left), generator.loadIfValueType(right));
+      return generator.builder.createFDiv(generator.emitExpression(left), generator.emitExpression(right));
     case ts.SyntaxKind.PercentToken:
-      return generator.builder.createFRem(generator.loadIfValueType(left), generator.loadIfValueType(right));
+      return generator.builder.createFRem(generator.emitExpression(left), generator.emitExpression(right));
     case ts.SyntaxKind.AmpersandToken:
-      return castToInt32AndBack([left, right], generator, ([leftInt, rightInt]) =>
-        generator.builder.createAnd(leftInt, rightInt)
+      return castToInt32AndBack(
+        [generator.emitExpression(left), generator.emitExpression(right)],
+        generator,
+        ([leftInt, rightInt]) => generator.builder.createAnd(leftInt, rightInt)
       );
     case ts.SyntaxKind.BarToken:
-      return castToInt32AndBack([left, right], generator, ([leftInt, rightInt]) =>
-        generator.builder.createOr(leftInt, rightInt)
+      return castToInt32AndBack(
+        [generator.emitExpression(left), generator.emitExpression(right)],
+        generator,
+        ([leftInt, rightInt]) => generator.builder.createOr(leftInt, rightInt)
       );
     case ts.SyntaxKind.CaretToken:
-      return castToInt32AndBack([left, right], generator, ([leftInt, rightInt]) =>
-        generator.builder.createXor(leftInt, rightInt)
+      return castToInt32AndBack(
+        [generator.emitExpression(left), generator.emitExpression(right)],
+        generator,
+        ([leftInt, rightInt]) => generator.builder.createXor(leftInt, rightInt)
       );
     case ts.SyntaxKind.LessThanLessThanToken:
-      return castToInt32AndBack([left, right], generator, ([leftInt, rightInt]) =>
-        generator.builder.createShl(leftInt, rightInt)
+      return castToInt32AndBack(
+        [generator.emitExpression(left), generator.emitExpression(right)],
+        generator,
+        ([leftInt, rightInt]) => generator.builder.createShl(leftInt, rightInt)
       );
     case ts.SyntaxKind.GreaterThanGreaterThanToken:
-      return castToInt32AndBack([left, right], generator, ([leftInt, rightInt]) =>
-        generator.builder.createAShr(leftInt, rightInt)
+      return castToInt32AndBack(
+        [generator.emitExpression(left), generator.emitExpression(right)],
+        generator,
+        ([leftInt, rightInt]) => generator.builder.createAShr(leftInt, rightInt)
       );
     case ts.SyntaxKind.GreaterThanGreaterThanGreaterThanToken:
-      return castToInt32AndBack([left, right], generator, ([leftInt, rightInt]) =>
-        generator.builder.createLShr(leftInt, rightInt)
+      return castToInt32AndBack(
+        [generator.emitExpression(left), generator.emitExpression(right)],
+        generator,
+        ([leftInt, rightInt]) => generator.builder.createLShr(leftInt, rightInt)
       );
     default:
       return error(`Unhandled ts.BinaryExpression operator '${ts.SyntaxKind[expression.operatorToken.kind]}'`);
@@ -194,7 +205,7 @@ export function emitCallExpression(expression: ts.CallExpression, generator: LLV
     args.unshift(generator.emitExpression(propertyAccess.expression));
   }
 
-  return generator.builder.createCall(callee, args.map(generator.loadIfValueType));
+  return generator.builder.createCall(callee, args);
 }
 
 export function emitPropertyAccessExpression(
@@ -208,23 +219,14 @@ export function emitPropertyAccessExpression(
     return emitArrayLengthAccess(left, generator);
   }
 
-  switch (left.kind) {
-    case ts.SyntaxKind.Identifier: {
-      const value = generator.symbolTable.get((left as ts.Identifier).text);
-      if (value instanceof Scope) {
-        return value.get(propertyName) as llvm.Value;
-      }
-      return emitPropertyAccessGEP(propertyName, value, generator);
+  if (ts.isIdentifier(left)) {
+    const value = generator.symbolTable.get((left as ts.Identifier).text);
+    if (value instanceof Scope) {
+      return value.get(propertyName) as llvm.Value;
     }
-    case ts.SyntaxKind.ThisKeyword:
-      return emitPropertyAccessGEP(propertyName, generator.symbolTable.get("this") as llvm.Value, generator);
-    case ts.SyntaxKind.PropertyAccessExpression: {
-      const value = emitPropertyAccessExpression(left as ts.PropertyAccessExpression, generator);
-      return emitPropertyAccessGEP(propertyName, generator.loadIfValueType(value), generator);
-    }
-    default:
-      return error(`Unhandled ts.LeftHandSideExpression '${ts.SyntaxKind[left.kind]}': ${left.getText()}`);
   }
+
+  return emitPropertyAccessGEP(propertyName, generator.emitExpression(left), generator);
 }
 
 export function emitElementAccessExpression(
@@ -239,7 +241,7 @@ export function emitElementAccessExpression(
     generator
   );
   const array = generator.emitExpression(expression.expression);
-  const index = generator.loadIfValueType(generator.emitExpression(expression.argumentExpression));
+  const index = generator.emitExpression(expression.argumentExpression);
   return generator.builder.createCall(subscript, [array, index]);
 }
 
@@ -272,6 +274,10 @@ export function emitIdentifier(expression: ts.Identifier, generator: LLVMGenerat
   return generator.symbolTable.get(expression.text) as llvm.Value;
 }
 
+export function emitThis(generator: LLVMGenerator): llvm.Value {
+  return generator.symbolTable.get("this") as llvm.Value;
+}
+
 export function emitBooleanLiteral(expression: ts.BooleanLiteral, generator: LLVMGenerator): llvm.Value {
   if (expression.kind === ts.SyntaxKind.TrueKeyword) {
     return llvm.ConstantInt.getTrue(generator.context);
@@ -301,7 +307,7 @@ export function emitArrayLiteralExpression(
   const array = generator.builder.createCall(constructor, []);
 
   for (const element of expression.elements) {
-    const elementValue = generator.loadIfValueType(generator.emitExpression(element));
+    const elementValue = generator.emitExpression(element);
     generator.builder.createCall(push, [array, elementValue]);
   }
 

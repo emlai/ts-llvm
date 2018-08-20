@@ -16,7 +16,7 @@ entry:
   store %string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @0, i32 0, i32 0), i32 3 }, %string* %a
   %a.load = load %string, %string* %a
   %a.load1 = load %string, %string* %a
-  %0 = call %string @string__concat(%string %a.load, %string %a.load1)
+  %0 = call %string @string__concat(%string %a.load1, %string %a.load)
   store %string %0, %string* %a
   %a.load2 = load %string, %string* %a
   %b = call %string @string__concat(%string %a.load2, %string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @1, i32 0, i32 0), i32 3 })

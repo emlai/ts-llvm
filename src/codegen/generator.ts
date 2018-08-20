@@ -18,7 +18,8 @@ import {
   emitPostfixUnaryExpression,
   emitPrefixUnaryExpression,
   emitPropertyAccessExpression,
-  emitStringLiteral
+  emitStringLiteral,
+  emitThis
 } from "./expression";
 import {
   emitBlock,
@@ -132,7 +133,7 @@ export class LLVMGenerator {
     }
   }
 
-  emitExpression(expression: ts.Expression): llvm.Value {
+  emitLvalueExpression(expression: ts.Expression): llvm.Value {
     switch (expression.kind) {
       case ts.SyntaxKind.PrefixUnaryExpression:
         return emitPrefixUnaryExpression(expression as ts.PrefixUnaryExpression, this);
@@ -148,6 +149,8 @@ export class LLVMGenerator {
         return emitElementAccessExpression(expression as ts.ElementAccessExpression, this);
       case ts.SyntaxKind.Identifier:
         return emitIdentifier(expression as ts.Identifier, this);
+      case ts.SyntaxKind.ThisKeyword:
+        return emitThis(this);
       case ts.SyntaxKind.TrueKeyword:
       case ts.SyntaxKind.FalseKeyword:
         return emitBooleanLiteral(expression as ts.BooleanLiteral, this);
@@ -162,18 +165,19 @@ export class LLVMGenerator {
       case ts.SyntaxKind.NewExpression:
         return emitNewExpression(expression as ts.NewExpression, this);
       case ts.SyntaxKind.ParenthesizedExpression:
-        return this.emitExpression((expression as ts.ParenthesizedExpression).expression);
+        return this.emitLvalueExpression((expression as ts.ParenthesizedExpression).expression);
       default:
         return error(`Unhandled ts.Expression '${ts.SyntaxKind[expression.kind]}'`);
     }
   }
 
-  loadIfValueType = (value: llvm.Value): llvm.Value => {
+  emitExpression(expression: ts.Expression): llvm.Value {
+    const value = this.emitLvalueExpression(expression);
     if (value.type.isPointerTy() && isValueType(value.type.elementType)) {
       return this.builder.createLoad(value, value.name + ".load");
     }
     return value;
-  };
+  }
 
   get currentFunction(): llvm.Function {
     return this.builder.getInsertBlock().parent!;

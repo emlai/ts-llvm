@@ -14,24 +14,24 @@ define void @foo(double %a, double %b) {
 entry:
   %a.alloca = alloca double
   store double %a, double* %a.alloca
-  %0 = load double, double* %a.alloca
-  %1 = fsub double -0.000000e+00, %0
-  %2 = load double, double* %a.alloca
-  %3 = fptosi double %2 to i32
-  %4 = xor i32 %3, -1
-  %5 = sitofp i32 %4 to double
-  %6 = load double, double* %a.alloca
-  %7 = fadd double %6, 1.000000e+00
+  %a.alloca.load = load double, double* %a.alloca
+  %0 = fsub double -0.000000e+00, %a.alloca.load
+  %a.alloca.load1 = load double, double* %a.alloca
+  %1 = fptosi double %a.alloca.load1 to i32
+  %2 = xor i32 %1, -1
+  %3 = sitofp i32 %2 to double
+  %a.alloca.load2 = load double, double* %a.alloca
+  %4 = fadd double %a.alloca.load2, 1.000000e+00
+  store double %4, double* %a.alloca
+  %a.alloca.load3 = load double, double* %a.alloca
+  %5 = fsub double %a.alloca.load3, 1.000000e+00
+  store double %5, double* %a.alloca
+  %a.alloca.load4 = load double, double* %a.alloca
+  %6 = fadd double %a.alloca.load4, 1.000000e+00
+  store double %6, double* %a.alloca
+  %a.alloca.load5 = load double, double* %a.alloca
+  %7 = fsub double %a.alloca.load5, 1.000000e+00
   store double %7, double* %a.alloca
-  %8 = load double, double* %a.alloca
-  %9 = fsub double %8, 1.000000e+00
-  store double %9, double* %a.alloca
-  %10 = load double, double* %a.alloca
-  %11 = fadd double %10, 1.000000e+00
-  store double %11, double* %a.alloca
-  %12 = load double, double* %a.alloca
-  %13 = fsub double %12, 1.000000e+00
-  store double %13, double* %a.alloca
   ret void
 }
 

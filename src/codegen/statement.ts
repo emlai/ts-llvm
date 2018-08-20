@@ -89,7 +89,7 @@ export function emitVariableStatement(
     const initializer = generator.loadIfValueType(generator.emitExpression(declaration.initializer!));
 
     if (isVarConst(declaration)) {
-      if (!initializer.hasName()) {
+      if (!(initializer instanceof llvm.Argument)) {
         initializer.name = name;
       }
       parentScope.set(name, initializer);

@@ -170,7 +170,7 @@ export class LLVMGenerator {
 
   loadIfValueType = (value: llvm.Value): llvm.Value => {
     if (value.type.isPointerTy() && isValueType(value.type.elementType)) {
-      return this.builder.createLoad(value);
+      return this.builder.createLoad(value, value.name + ".load");
     }
     return value;
   };

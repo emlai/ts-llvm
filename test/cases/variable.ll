@@ -19,9 +19,9 @@ entry:
   %localAllocaAlias = load double, double* %localLet
   store double %localConst, double* %localLet
   store double %localAllocaAlias, double* %localVar
-  %1 = load double, double* %localLet
-  %2 = fadd double %param, %1
-  store double %2, double* %localVar
-  %3 = load double, double* %localVar
-  ret double %3
+  %localLet.load = load double, double* %localLet
+  %1 = fadd double %param, %localLet.load
+  store double %1, double* %localVar
+  %localVar.load = load double, double* %localVar
+  ret double %localVar.load
 }

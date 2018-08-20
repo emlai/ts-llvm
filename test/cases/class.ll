@@ -16,8 +16,8 @@ entry:
   %c = getelementptr inbounds %A, %A* %a, i32 0, i32 1
   store double 1.000000e+00, double* %c
   %b = getelementptr inbounds %A, %A* %a, i32 0, i32 0
-  %0 = load %B*, %B** %b
-  store %B* %0, %B** %x
+  %b.load = load %B*, %B** %b
+  store %B* %b.load, %B** %x
   call void @A__a(%A* %a)
   ret i32 0
 }
@@ -48,11 +48,11 @@ entry:
 define void @A__a(%A* %this) {
 entry:
   %b = getelementptr inbounds %A, %A* %this, i32 0, i32 0
-  %0 = load %B*, %B** %b
-  %b1 = getelementptr inbounds %B, %B* %0, i32 0, i32 0
+  %b.load = load %B*, %B** %b
+  %b1 = getelementptr inbounds %B, %B* %b.load, i32 0, i32 0
   %c = getelementptr inbounds %A, %A* %this, i32 0, i32 1
-  %1 = load double, double* %c
-  store double %1, double* %b1
+  %c.load = load double, double* %c
+  store double %c.load, double* %b1
   call void @console__log(%string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @0, i32 0, i32 0), i32 3 })
   ret void
 }

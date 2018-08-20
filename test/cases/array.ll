@@ -25,31 +25,31 @@ entry:
   call void @Array__number__push(%Array__number* %a, double 3.000000e+00)
   call void @Array__number__push(%Array__number* %a, double 4.000000e+00)
   %0 = call double* @Array__number__subscript(%Array__number* %a, double 1.000000e+00)
-  %1 = load double, double* %0
-  store double %1, double* %b
-  %2 = call double* @Array__number__subscript(%Array__number* %a, double 1.000000e+00)
-  %3 = load double, double* %b
-  %4 = call double* @Array__number__subscript(%Array__number* %a, double %3)
-  %5 = load double, double* %4
-  %6 = call double* @Array__number__subscript(%Array__number* %a, double %5)
-  %7 = load double, double* %6
-  store double %7, double* %2
-  %8 = call double @Array__number__length(%Array__number* %a)
-  store double %8, double* %c
-  %9 = call %Array__boolean* @Array__boolean__constructor()
-  call void @Array__boolean__push(%Array__boolean* %9, i1 false)
-  call void @Array__boolean__push(%Array__boolean* %9, i1 true)
-  %10 = call double @Array__number__length(%Array__number* %a)
-  %11 = fcmp oeq double %10, 4.000000e+00
-  call void @Array__boolean__push(%Array__boolean* %9, i1 %11)
-  store %Array__boolean* %9, %Array__boolean** %d
+  %.load = load double, double* %0
+  store double %.load, double* %b
+  %1 = call double* @Array__number__subscript(%Array__number* %a, double 1.000000e+00)
+  %b.load = load double, double* %b
+  %2 = call double* @Array__number__subscript(%Array__number* %a, double %b.load)
+  %.load1 = load double, double* %2
+  %3 = call double* @Array__number__subscript(%Array__number* %a, double %.load1)
+  %.load2 = load double, double* %3
+  store double %.load2, double* %1
+  %4 = call double @Array__number__length(%Array__number* %a)
+  store double %4, double* %c
+  %5 = call %Array__boolean* @Array__boolean__constructor()
+  call void @Array__boolean__push(%Array__boolean* %5, i1 false)
+  call void @Array__boolean__push(%Array__boolean* %5, i1 true)
+  %6 = call double @Array__number__length(%Array__number* %a)
+  %7 = fcmp oeq double %6, 4.000000e+00
+  call void @Array__boolean__push(%Array__boolean* %5, i1 %7)
+  store %Array__boolean* %5, %Array__boolean** %d
   store %string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @1, i32 0, i32 0), i32 3 }, %string* %baz
-  %12 = call %Array__string* @Array__string__constructor()
-  call void @Array__string__push(%Array__string* %12, %string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @2, i32 0, i32 0), i32 3 })
-  call void @Array__string__push(%Array__string* %12, %string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @0, i32 0, i32 0), i32 3 })
-  %13 = load %string, %string* %baz
-  call void @Array__string__push(%Array__string* %12, %string %13)
-  store %Array__string* %12, %Array__string** %e
+  %8 = call %Array__string* @Array__string__constructor()
+  call void @Array__string__push(%Array__string* %8, %string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @2, i32 0, i32 0), i32 3 })
+  call void @Array__string__push(%Array__string* %8, %string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @0, i32 0, i32 0), i32 3 })
+  %baz.load = load %string, %string* %baz
+  call void @Array__string__push(%Array__string* %8, %string %baz.load)
+  store %Array__string* %8, %Array__string** %e
   ret i32 0
 }
 

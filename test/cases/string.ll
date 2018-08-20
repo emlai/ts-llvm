@@ -14,15 +14,15 @@ define i32 @main() {
 entry:
   %a = alloca %string
   store %string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @0, i32 0, i32 0), i32 3 }, %string* %a
-  %0 = load %string, %string* %a
-  %1 = load %string, %string* %a
-  %2 = call %string @string__concat(%string %0, %string %1)
-  store %string %2, %string* %a
-  %3 = load %string, %string* %a
-  %b = call %string @string__concat(%string %3, %string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @1, i32 0, i32 0), i32 3 })
-  %4 = call %string @string__concat(%string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @3, i32 0, i32 0), i32 3 }, %string %b)
-  %5 = call %string @string__concat(%string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @2, i32 0, i32 0), i32 3 }, %string %4)
-  call void @console__log(%string %5)
+  %a.load = load %string, %string* %a
+  %a.load1 = load %string, %string* %a
+  %0 = call %string @string__concat(%string %a.load, %string %a.load1)
+  store %string %0, %string* %a
+  %a.load2 = load %string, %string* %a
+  %b = call %string @string__concat(%string %a.load2, %string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @1, i32 0, i32 0), i32 3 })
+  %1 = call %string @string__concat(%string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @3, i32 0, i32 0), i32 3 }, %string %b)
+  %2 = call %string @string__concat(%string { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @2, i32 0, i32 0), i32 3 }, %string %1)
+  call void @console__log(%string %2)
   ret i32 0
 }
 

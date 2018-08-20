@@ -4,7 +4,7 @@ import { createGCAllocate, getBuiltin } from "../builtins";
 import { error } from "../diagnostics";
 import { getDeclarationBaseName } from "../mangle";
 import { Scope } from "../symbol-table";
-import { getMemberIndex, getTypeArguments, isArray, isMethodReference } from "../tsc-utils";
+import { getPropertyIndex, getTypeArguments, isArray, isMethodReference } from "../tsc-utils";
 import { getLLVMType, getStringType } from "../types";
 import { getMethod, isString, keepInsertionPoint } from "../utils";
 import { emitFunctionDeclaration } from "./declaration";
@@ -226,7 +226,7 @@ export function emitPropertyAccessExpression(
     }
   }
 
-  return emitPropertyAccessGEP(propertyName, generator.emitExpression(left), generator);
+  return emitPropertyAccessGEP(propertyName, left, generator);
 }
 
 export function emitElementAccessExpression(
@@ -252,21 +252,20 @@ export function emitArrayLengthAccess(expression: ts.Expression, generator: LLVM
   return generator.builder.createCall(lengthGetter, [array]);
 }
 
-export function emitPropertyAccessGEP(propertyName: string, value: llvm.Value, generator: LLVMGenerator): llvm.Value {
+export function emitPropertyAccessGEP(
+  propertyName: string,
+  expression: ts.Expression,
+  generator: LLVMGenerator
+): llvm.Value {
+  const value = generator.emitExpression(expression);
+
   if (!value.type.isPointerTy() || !value.type.elementType.isStructTy()) {
     return error(`Property access left-hand-side must be a pointer to a struct, found '${value.type}'`);
   }
-  const typeName = value.type.elementType.name;
-  if (!typeName) {
-    return error("Property access not implemented for anonymous object types");
-  }
-  const typeScope = generator.symbolTable.get(typeName) as Scope;
-  const type = typeScope.data!.declaration as ts.ClassDeclaration;
 
-  const indexList = [
-    llvm.ConstantInt.get(generator.context, 0),
-    llvm.ConstantInt.get(generator.context, getMemberIndex(propertyName, type))
-  ];
+  const type = generator.checker.getTypeAtLocation(expression);
+  const index = getPropertyIndex(propertyName, type, generator.checker);
+  const indexList = [llvm.ConstantInt.get(generator.context, 0), llvm.ConstantInt.get(generator.context, index)];
   return generator.builder.createInBoundsGEP(value, indexList, propertyName);
 }
 

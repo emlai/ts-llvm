@@ -5,13 +5,14 @@ export function isVarConst(node: ts.VariableDeclaration | ts.VariableDeclaration
   return !!(ts.getCombinedNodeFlags(node) & ts.NodeFlags.Const);
 }
 
-export function getMemberIndex(name: string, declaration: ts.ClassDeclaration) {
-  const index = declaration.members.findIndex(
-    member => ts.isPropertyDeclaration(member) && member.name.getText() === name
-  );
+export function getPropertyIndex(name: string, type: ts.Type, checker: ts.TypeChecker): number {
+  const properties = checker.getPropertiesOfType(type);
+  const index = properties.findIndex(property => property.name === name);
+
   if (index < 0) {
-    return error(`Type '${declaration.name!.text}' has no field '${name}'`);
+    return error(`Type '${checker.typeToString(type)}' has no property '${name}'`);
   }
+
   return index;
 }
 

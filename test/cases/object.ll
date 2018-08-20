@@ -17,6 +17,10 @@ entry:
   store double 1.000000e+00, double* %a
   %b = getelementptr inbounds { double, double }, { double, double }* %a1, i32 0, i32 1
   store double 2.000000e+00, double* %b
+  %a2 = getelementptr inbounds { double, double }, { double, double }* %a1, i32 0, i32 0
+  %b3 = getelementptr inbounds { double, double }, { double, double }* %a1, i32 0, i32 1
+  %b3.load = load double, double* %b3
+  store double %b3.load, double* %a2
   ret void
 }
 

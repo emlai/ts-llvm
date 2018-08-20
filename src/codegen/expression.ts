@@ -28,18 +28,18 @@ export function emitPrefixUnaryExpression(expression: ts.PrefixUnaryExpression, 
       return generator.emitExpression(operand);
     case ts.SyntaxKind.MinusToken:
       return generator.builder.createFNeg(generator.emitExpression(operand));
-    case ts.SyntaxKind.PlusPlusToken:
-      return emitAssignment(
-        generator.emitLvalueExpression(operand),
-        generator.builder.createFAdd(generator.emitExpression(operand), llvm.ConstantFP.get(generator.context, 1)),
-        generator
-      );
-    case ts.SyntaxKind.MinusMinusToken:
-      return emitAssignment(
-        generator.emitLvalueExpression(operand),
-        generator.builder.createFSub(generator.emitExpression(operand), llvm.ConstantFP.get(generator.context, 1)),
-        generator
-      );
+    case ts.SyntaxKind.PlusPlusToken: {
+      const lvalue = generator.emitLvalueExpression(operand);
+      const oldValue = generator.convertToRvalue(lvalue);
+      const newValue = generator.builder.createFAdd(oldValue, llvm.ConstantFP.get(generator.context, 1));
+      return emitAssignment(lvalue, newValue, generator);
+    }
+    case ts.SyntaxKind.MinusMinusToken: {
+      const lvalue = generator.emitLvalueExpression(operand);
+      const oldValue = generator.convertToRvalue(lvalue);
+      const newValue = generator.builder.createFSub(oldValue, llvm.ConstantFP.get(generator.context, 1));
+      return emitAssignment(lvalue, newValue, generator);
+    }
     case ts.SyntaxKind.TildeToken:
       return castToInt32AndBack([generator.emitExpression(operand)], generator, ([value]) =>
         generator.builder.createNot(value)
@@ -57,15 +57,17 @@ export function emitPostfixUnaryExpression(
 
   switch (expression.operator) {
     case ts.SyntaxKind.PlusPlusToken: {
-      const oldValue = generator.emitExpression(operand);
+      const lvalue = generator.emitLvalueExpression(operand);
+      const oldValue = generator.convertToRvalue(lvalue);
       const newValue = generator.builder.createFAdd(oldValue, llvm.ConstantFP.get(generator.context, 1));
-      emitAssignment(generator.emitLvalueExpression(operand), newValue, generator);
+      emitAssignment(lvalue, newValue, generator);
       return oldValue;
     }
     case ts.SyntaxKind.MinusMinusToken: {
-      const oldValue = generator.emitExpression(operand);
+      const lvalue = generator.emitLvalueExpression(operand);
+      const oldValue = generator.convertToRvalue(lvalue);
       const newValue = generator.builder.createFSub(oldValue, llvm.ConstantFP.get(generator.context, 1));
-      emitAssignment(generator.emitLvalueExpression(operand), newValue, generator);
+      emitAssignment(lvalue, newValue, generator);
       return oldValue;
     }
   }
@@ -90,7 +92,8 @@ function emitAssignment(left: llvm.Value, right: llvm.Value, generator: LLVMGene
     generator.symbolTable.currentScope.overwrite(left.name, alloca);
     left = alloca;
   }
-  return generator.builder.createStore(right, left);
+  generator.builder.createStore(right, left);
+  return right;
 }
 
 export function emitBinaryExpression(expression: ts.BinaryExpression, generator: LLVMGenerator): llvm.Value {

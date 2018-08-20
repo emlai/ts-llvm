@@ -6,6 +6,7 @@ target triple = "x86_64"
 define i32 @main() {
 entry:
   call void @foo(double 1.000000e+00, double 2.000000e+00)
+  call void @fooObj()
   call void @bar(double 1.000000e+00, double 2.000000e+00)
   ret i32 0
 }
@@ -34,6 +35,33 @@ entry:
   store double %7, double* %a.alloca
   ret void
 }
+
+define void @fooObj() {
+entry:
+  %0 = call i8* @gc__allocate(i32 8)
+  %a = bitcast i8* %0 to { double }*
+  %b = getelementptr inbounds { double }, { double }* %a, i32 0, i32 0
+  store double 0.000000e+00, double* %b
+  %b1 = getelementptr inbounds { double }, { double }* %a, i32 0, i32 0
+  %b1.load = load double, double* %b1
+  %1 = fadd double %b1.load, 1.000000e+00
+  store double %1, double* %b1
+  %b2 = getelementptr inbounds { double }, { double }* %a, i32 0, i32 0
+  %b2.load = load double, double* %b2
+  %2 = fsub double %b2.load, 1.000000e+00
+  store double %2, double* %b2
+  %b3 = getelementptr inbounds { double }, { double }* %a, i32 0, i32 0
+  %b3.load = load double, double* %b3
+  %3 = fadd double %b3.load, 1.000000e+00
+  store double %3, double* %b3
+  %b4 = getelementptr inbounds { double }, { double }* %a, i32 0, i32 0
+  %b4.load = load double, double* %b4
+  %4 = fsub double %b4.load, 1.000000e+00
+  store double %4, double* %b4
+  ret void
+}
+
+declare i8* @gc__allocate(i32)
 
 define void @bar(double %a, double %b) {
 entry:

@@ -8,6 +8,14 @@ function foo(a: number, b: number) {
   --a;
 }
 
+function fooObj() {
+  const a = { b: 0 };
+  a.b++;
+  a.b--;
+  ++a.b;
+  --a.b;
+}
+
 function bar(a: number, b: number) {
   a + b;
   a - b;
@@ -38,4 +46,5 @@ function bar(a: number, b: number) {
 }
 
 foo(1, 2);
+fooObj();
 bar(1, 2);

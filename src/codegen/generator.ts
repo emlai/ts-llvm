@@ -172,7 +172,10 @@ export class LLVMGenerator {
   }
 
   emitExpression(expression: ts.Expression): llvm.Value {
-    const value = this.emitLvalueExpression(expression);
+    return this.convertToRvalue(this.emitLvalueExpression(expression));
+  }
+
+  convertToRvalue(value: llvm.Value) {
     if (value.type.isPointerTy() && isValueType(value.type.elementType)) {
       return this.builder.createLoad(value, value.name + ".load");
     }

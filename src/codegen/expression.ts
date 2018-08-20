@@ -4,16 +4,9 @@ import { createGCAllocate, getBuiltin } from "../builtins";
 import { error } from "../diagnostics";
 import { getDeclarationBaseName } from "../mangle";
 import { Scope } from "../symbol-table";
+import { getMemberIndex, getTypeArguments, isArray, isMethodReference } from "../tsc-utils";
 import { getLLVMType, getStringType } from "../types";
-import {
-  getMemberIndex,
-  getMethod,
-  getTypeArguments,
-  isArray,
-  isMethodReference,
-  isString,
-  keepInsertionPoint
-} from "../utils";
+import { getMethod, isString, keepInsertionPoint } from "../utils";
 import { emitFunctionDeclaration } from "./declaration";
 import { LLVMGenerator } from "./generator";
 import { createEntryBlockAlloca } from "./statement";

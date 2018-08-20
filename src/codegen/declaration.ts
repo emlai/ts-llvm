@@ -5,8 +5,9 @@ import { createGCAllocate } from "../builtins";
 import { error } from "../diagnostics";
 import { getDeclarationBaseName, mangleFunctionDeclaration, mangleType } from "../mangle";
 import { Scope } from "../symbol-table";
+import { addTypeArguments } from "../tsc-utils";
 import { getLLVMType, getStringType, getStructType } from "../types";
-import { addTypeArguments, createLLVMFunction, isValueType } from "../utils";
+import { createLLVMFunction, isValueType } from "../utils";
 import { LLVMGenerator } from "./generator";
 
 type FunctionLikeDeclaration =

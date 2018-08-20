@@ -1,6 +1,6 @@
 import * as ts from "typescript";
 import { error } from "./diagnostics";
-import { getTypeArguments, getTypeBaseName } from "./utils";
+import { getTypeArguments, getTypeBaseName } from "./tsc-utils";
 
 export function getDeclarationBaseName(declaration: ts.NamedDeclaration) {
   switch (declaration.kind) {

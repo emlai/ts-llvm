@@ -4,7 +4,7 @@ import { emitClassDeclaration } from "./codegen/declaration";
 import { getOrEmitFunctionForCall } from "./codegen/expression";
 import { LLVMGenerator } from "./codegen/generator";
 import { error } from "./diagnostics";
-import { getTypeArguments } from "./tsc-utils";
+import { getTypeArguments, isProperty } from "./tsc-utils";
 
 export function replaceExtension(filePath: string, extension: string): string {
   return filePath.replace(/\.[^\.\/\\]+$/, "") + extension;
@@ -34,6 +34,10 @@ export function isValueType(type: llvm.Type) {
 
 export function isLLVMString(type: llvm.Type) {
   return type.isStructTy() && type.name === "string";
+}
+
+export function getStoredProperties(type: ts.Type, checker: ts.TypeChecker) {
+  return checker.getPropertiesOfType(type).filter(isProperty);
 }
 
 export function getMethod(type: ts.Type, name: string, argumentTypes: ts.Type[], generator: LLVMGenerator) {

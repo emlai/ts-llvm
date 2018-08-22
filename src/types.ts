@@ -3,7 +3,8 @@ import * as ts from "typescript";
 import { LLVMGenerator } from "./codegen/generator";
 import { error } from "./diagnostics";
 import { mangleType } from "./mangle";
-import { isString } from "./tsc-utils";
+import { isObject, isString } from "./tsc-utils";
+import { getStoredProperties } from "./utils";
 
 export function getLLVMType(type: ts.Type, generator: LLVMGenerator): llvm.Type {
   const { context, checker } = generator;
@@ -22,7 +23,7 @@ export function getLLVMType(type: ts.Type, generator: LLVMGenerator): llvm.Type 
     return getStringType(context);
   }
 
-  if (type.flags & ts.TypeFlags.Object) {
+  if (isObject(type)) {
     // TODO: Pass correct isOpaque parameter.
     return getStructType(type, false, generator).getPointerTo();
   }
@@ -38,15 +39,12 @@ export function getLLVMType(type: ts.Type, generator: LLVMGenerator): llvm.Type 
   return error(`Unhandled ts.Type '${checker.typeToString(type)}'`);
 }
 
-export function getStructType(type: ts.Type, isOpaque: boolean, generator: LLVMGenerator) {
+export function getStructType(type: ts.ObjectType, isOpaque: boolean, generator: LLVMGenerator) {
   const { context, module, checker } = generator;
 
-  const elements = checker
-    .getPropertiesOfType(type)
-    .map(property => property.declarations[0])
-    .filter(declaration => ts.isPropertyAssignment(declaration) || ts.isPropertyDeclaration(declaration))
-    .map(declaration => getLLVMType(checker.getTypeAtLocation(declaration), generator));
-
+  const elements = getStoredProperties(type, checker).map(property =>
+    getLLVMType(checker.getTypeAtLocation(property.valueDeclaration), generator)
+  );
   const declaration = type.symbol.declarations[0];
   let struct: llvm.StructType | null;
 

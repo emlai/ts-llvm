@@ -339,7 +339,11 @@ export function emitObjectLiteralExpression(
   for (const property of expression.properties) {
     switch (property.kind) {
       case ts.SyntaxKind.PropertyAssignment:
-        const value = generator.emitExpression((property as ts.PropertyAssignment).initializer);
+      case ts.SyntaxKind.ShorthandPropertyAssignment:
+        const value = ts.isPropertyAssignment(property)
+          ? generator.emitExpression(property.initializer)
+          : generator.emitExpression(property.name);
+
         const indexList = [
           llvm.ConstantInt.get(generator.context, 0),
           llvm.ConstantInt.get(generator.context, propertyIndex++)

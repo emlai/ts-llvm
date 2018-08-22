@@ -43,14 +43,22 @@ export function isMethodReference(expression: ts.Expression, checker: ts.TypeChe
   );
 }
 
-export function isArray(type: ts.Type) {
+export function isObject(type: ts.Type): type is ts.ObjectType {
+  return !!(type.flags & ts.TypeFlags.Object);
+}
+
+export function isArray(type: ts.Type): type is ts.ObjectType {
   return type.symbol && type.symbol.name === "Array";
 }
 
-export function isString(type: ts.Type) {
-  return type.flags & (ts.TypeFlags.String | ts.TypeFlags.StringLiteral);
+export function isString(type: ts.Type): boolean {
+  return !!(type.flags & (ts.TypeFlags.String | ts.TypeFlags.StringLiteral));
 }
 
 export function getTypeBaseName(type: ts.Type, checker: ts.TypeChecker) {
   return type.symbol ? type.symbol.name : checker.typeToString(checker.getBaseTypeOfLiteralType(type));
+}
+
+export function isProperty(symbol: ts.Symbol): boolean {
+  return !!(symbol.flags & ts.SymbolFlags.Property);
 }

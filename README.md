@@ -20,6 +20,10 @@ If you're willing to contribute, any help will be greatly appreciated. For
 questions you can create a GitHub issue or ask on the [ts-llvm
 Slack](https://join.slack.com/t/ts-llvm/shared_invite/enQtMzU4MjQwMjI4MzUzLTk3M2VjYWU4MjA3MzIxMGIxMTJkMDg0ODdlZWNlNzg1ZDBkMjRiMjJmMzc2ZDYwZTYxMTg3NzVlMmJlY2JiNDg).
 
+Check out the [language features roadmap](https://github.com/ts-llvm/ts-llvm/issues/6)
+to see what has been implemented so far, and what still needs to be implemented
+for the v1.0 release.
+
 ## Building from source
 
 1. You need to have LLVM installed on your system.

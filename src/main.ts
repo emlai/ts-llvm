@@ -7,6 +7,7 @@ import * as path from "path";
 import * as SegfaultHandler from "segfault-handler";
 import * as ts from "typescript";
 import { emitLLVM } from "./codegen/generator";
+import { error } from "./diagnostics";
 import { replaceExtension } from "./utils";
 
 SegfaultHandler.registerHandler("ts-llvm-crash.log");
@@ -103,6 +104,7 @@ function writeExecutableToFile(module: llvm.Module, program: ts.Program): void {
   const optimizationLevel = "-O3";
 
   try {
+    checkLLCVersion();
     execFileSync("llc", [optimizationLevel, "-filetype=obj", bitcodeFile, "-o", objectFile]);
     execFileSync("cc", [
       optimizationLevel,
@@ -114,7 +116,30 @@ function writeExecutableToFile(module: llvm.Module, program: ts.Program): void {
       "-Werror"
     ]);
   } finally {
-    fs.unlinkSync(bitcodeFile);
-    fs.unlinkSync(objectFile);
+    deleteFile(bitcodeFile);
+    if (fs.existsSync(objectFile)) {
+      fs.unlinkSync(objectFile);
+    }
+  }
+}
+
+function checkLLCVersion() {
+  const llcVersion = execFileSync("llc", ["--version"])
+    .toString()
+    .match(/LLVM version ((\d+)[\d\.]*)/);
+  console.log({ llcVersion });
+
+  if (llcVersion && Number(llcVersion[2]) !== llvm.config.LLVM_VERSION_MAJOR) {
+    error(
+      `Detected llc is built with LLVM version ${llcVersion[1]} which may be incompatible with version ${
+        llvm.config.LLVM_VERSION_STRING
+      } used by llvm-node. Compiling might fail.`
+    );
+  }
+}
+
+function deleteFile(file: fs.PathLike) {
+  if (fs.existsSync(file)) {
+    fs.unlinkSync(file);
   }
 }

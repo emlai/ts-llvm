@@ -50,9 +50,9 @@ your PATH, you may need to tell llvm-node where to find LLVM on your system,
 e.g. by running `npm config set cmake_LLVM_DIR $(path-to-llvm/bin/llvm-config
 --cmakedir)` before `npm install`.
 3. If you want ts-llvm to generate native code, you need to have
-[`llc`](https://llvm.org/docs/CommandGuide/llc.html) and `cc` (any C++ compiler)
+[`llc`](https://llvm.org/docs/CommandGuide/llc.html) and `g++` (any C++ compiler)
 on your PATH. `llc` will not be required once llvm-node gains support for the
-LLVM legacy PassManager and addPassesToEmitFile APIs. `cc` will not be required
+LLVM legacy PassManager and addPassesToEmitFile APIs. `g++` will not be required
 once ts-llvm learns to detect the system C++ compiler on its own.
 
 Once everything above is set up, you can use the following commands:

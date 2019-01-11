@@ -61,7 +61,10 @@ Once everything above is set up, you can use the following commands:
 - `npm start` will run the ts-llvm compiler. You can pass arguments to the
   compiler after two consecutive hyphens: e.g. `npm start -- --help` will print
   the compiler's usage information.
-- `npm test` will run the test suite.
+- `npm test` will run the test suite. ts-llvm uses
+  [snapshot testing](https://sqa.stackexchange.com/questions/29696/what-is-snapshot-testing)
+  to test the output LLVM IR code. Use `npm run updateSnapshots` to update the
+  snapshot files.
 
 ## License
 

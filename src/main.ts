@@ -104,7 +104,7 @@ function writeExecutableToFile(module: llvm.Module, program: ts.Program): void {
 
   try {
     execFileSync("llc", [optimizationLevel, "-filetype=obj", bitcodeFile, "-o", objectFile]);
-    execFileSync("cc", [
+    execFileSync("g++", [
       optimizationLevel,
       objectFile,
       ...runtimeLibFiles,

@@ -1,4 +1,4 @@
-# ts-llvm
+# ts-llvm [![Build Status](https://travis-ci.org/ts-llvm/ts-llvm.svg?branch=master)](https://travis-ci.org/ts-llvm/ts-llvm)
 
 ts-llvm is a compiler for [TypeScript](https://www.typescriptlang.org/) that
 generates [LLVM](https://llvm.org/) code, which can then be optimized using all

@@ -2,6 +2,7 @@ import chalk from "chalk";
 import * as child_process from "child_process";
 import { diffLines } from "diff";
 import * as fs from "fs";
+import * as ora from "ora";
 import * as path from "path";
 import { promisify } from "util";
 import { replaceExtension } from "../src/utils";
@@ -12,7 +13,7 @@ const writeFile = promisify(fs.writeFile);
 const unlink = promisify(fs.unlink);
 
 const updateSnapshots = process.argv.includes("--updateSnapshots");
-const tests = fs.readdirSync(path.join(__dirname, "cases")).filter(file => file.endsWith(".ts"));
+const spinner = ora();
 
 async function runTest(file: string) {
   const compilerPath = path.join(__dirname, "..", "src", "main.ts");
@@ -34,21 +35,23 @@ async function runTest(file: string) {
   }
 
   if (!output || !expectedOutput || output !== expectedOutput) {
-    console.log(`TEST FAILED: ${file} (${testCommand.join(" ")})`);
+    spinner.fail(`TEST FAILED: ${file} (${testCommand.join(" ")})`);
 
     if (error) {
       console.log(error.stdout || error.toString());
     } else if (updateSnapshots) {
       await writeFile(outputFile, output);
-      console.log(`✓ Snapshot ${path.basename(outputFile)} updated.\n`);
+      spinner.succeed(`Snapshot ${path.basename(outputFile)} updated.`);
     } else {
       const diffParts = diffLines(output.toString(), expectedOutput.toString());
 
       diffParts.forEach(({ value, added, removed }) => {
         process.stdout.write(added ? green(value) : removed ? red(value) : value);
       });
+      process.stdout.write("\n");
     }
 
+    spinner.start();
     return file;
   }
 
@@ -66,7 +69,10 @@ async function runTest(file: string) {
 
 async function main() {
   try {
+    spinner.start(updateSnapshots ? "Updating snapshots..." : "Running tests...");
+    const tests = fs.readdirSync(path.join(__dirname, "cases")).filter(file => file.endsWith(".ts"));
     const failedTests = (await Promise.all(tests.map(runTest))).filter(Boolean);
+    spinner.stop();
 
     if (updateSnapshots) {
       process.exit();
@@ -76,9 +82,9 @@ async function main() {
       process.exit(1);
     }
 
-    console.log(`All ${tests.length} tests passed.`);
+    spinner.succeed(`All ${tests.length} tests passed.`);
   } catch (error) {
-    console.log(error.stdout || error.toString());
+    spinner.fail(error.stdout || error.toString());
     process.exit(1);
   }
 }

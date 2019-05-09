@@ -38,6 +38,7 @@ for the v1.0 release.
 
 ## Related projects
 
+- [StaticScript](https://github.com/ovr/StaticScript), another TypeScript to LLVM compiler.
 - [AssemblyScript](https://github.com/AssemblyScript/assemblyscript), a TypeScript to WebAssembly compiler.
 - [Speedy.js](https://github.com/MichaReiser/speedy.js), a JavaScript subset to WebAssembly compiler. Uses the
   TypeScript compiler API.
